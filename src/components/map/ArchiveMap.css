@@ -177,6 +177,26 @@
   padding-top: 44px;
 }
 
+.schedule-popup h3 {
+  font-size: 14px;
+  margin: 12px 0 4px;
+}
+
+.schedule-setlist {
+  padding-left: 24px;
+  margin: 8px 0 12px;
+}
+
+.schedule-media-notice {
+  font-size: 12px;
+  color: #555;
+}
+
+.schedule-data-error {
+  color: #b91c1c;
+  font-weight: bold;
+}
+
 .schedule-popup h2 {
   font-size: 16px;
   margin: 0 0 8px;

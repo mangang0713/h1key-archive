@@ -5,6 +5,7 @@ import type { FeatureCollection, Point } from 'geojson'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './ArchiveMap.css'
+import { createSchedulePopupContent } from './SchedulePopupContent'
 import { locations } from '../../data/locations'
 import { schedules } from '../../data/schedules'
 import type { Location, Schedule } from '../../types/archive'
@@ -21,7 +22,10 @@ const schedulesByLocation = new Map(
   locations.map((location) => [
     location.id,
     schedules.filter((schedule) => schedule.locationId === location.id)
-      .sort((a, b) => a.date.localeCompare(b.date) || a.order - b.order || a.id.localeCompare(b.id)),
+      .sort((a, b) => a.date.localeCompare(b.date)
+        || (a.orderInDay ?? Infinity) - (b.orderInDay ?? Infinity)
+        || (a.startTime ?? '99').localeCompare(b.startTime ?? '99')
+        || a.id.localeCompare(b.id)),
   ]),
 )
 const locationPoints: FeatureCollection<Point> = {
@@ -54,7 +58,7 @@ function ArchiveMap() {
     map.touchZoomRotate.disableRotation()
 
     let disposed = false
-    const popup = new Popup({ maxWidth: '300px', offset: 48, anchor: 'bottom' })
+    const popup = new Popup({ maxWidth: 'min(300px, calc(100vw - 24px))', offset: 48, anchor: 'bottom' })
     let savedCamera: SavedCamera | undefined
     let selectedLocationId: string | undefined
     let cameraRequest = 0
@@ -96,78 +100,19 @@ function ArchiveMap() {
       popupEvents = new AbortController()
       const signal = popupEvents.signal
       const locationSchedules = schedulesByLocation.get(location.id) ?? []
-      const content = document.createElement('section')
-      content.className = 'schedule-popup'
-      // 내부 버튼 클릭이 지도 클릭으로 전달되어 Popup을 닫지 않도록 합니다.
-      content.addEventListener('click', (event) => event.stopPropagation(), { signal })
-      content.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          event.stopPropagation()
-          popup.remove()
-        }
-      }, { signal })
-      const heading = document.createElement('h2')
-      heading.tabIndex = -1
-      heading.textContent = selected ? selected.title : `${location.name} · 스케줄 목록`
-      const notice = document.createElement('p')
-      notice.textContent = '가상 테스트 데이터 · 실제 H1-KEY 행사 아님'
-      content.append(heading, notice)
-
-      if (selected) {
-        const details = document.createElement('dl')
-        details.className = 'schedule-details'
-        for (const [label, value] of [
-          ['날짜', selected.date],
-          ['장소', location.name],
-          ['순서', `전체 스케줄 ${selected.order}번째`],
-        ]) {
-          const term = document.createElement('dt')
-          term.textContent = label
-          const description = document.createElement('dd')
-          description.textContent = value
-          details.append(term, description)
-        }
-        content.append(details)
-        if (locationSchedules.length > 1) {
-          const back = document.createElement('button')
-          back.type = 'button'
-          back.className = 'schedule-choice'
-          back.textContent = '스케줄 목록으로 돌아가기'
-          back.addEventListener('click', (event) => {
-            event.stopPropagation()
-            openPopup(location)
-          }, { signal })
-          content.append(back)
-        }
-      } else {
-        const list = document.createElement('ul')
-        for (const schedule of locationSchedules) {
-          const item = document.createElement('li')
-          const choice = document.createElement('button')
-          choice.type = 'button'
-          choice.className = 'schedule-choice'
-          const date = document.createElement('time')
-          date.dateTime = schedule.date
-          date.textContent = schedule.date
-          const title = document.createElement('strong')
-          title.textContent = schedule.title
-          const order = document.createElement('span')
-          order.textContent = `전체 스케줄 ${schedule.order}번째`
-          choice.append(date, title, order)
-          choice.addEventListener('click', (event) => {
-            event.stopPropagation()
-            openPopup(location, schedule)
-          }, { signal })
-          item.append(choice)
-          list.append(item)
-        }
-        content.append(list)
-      }
+      const { content, focusTarget } = createSchedulePopupContent({
+        location,
+        schedules: locationSchedules,
+        selected,
+        signal,
+        onSelect: (schedule) => openPopup(location, schedule),
+        onBack: () => openPopup(location),
+        onClose: () => popup.remove(),
+      })
       popup.setLngLat(location.coordinates).setDOMContent(content)
       if (!popup.isOpen()) popup.addTo(map)
       // 상세 제목 또는 첫 목록 항목으로 포커스를 이동합니다.
-      if (selected) heading.focus()
-      else content.querySelector<HTMLButtonElement>('button')?.focus()
+      focusTarget.focus()
     }
 
     const selectLocation = (location: Location) => {
@@ -336,3 +281,4 @@ function ArchiveMap() {
 }
 
 export default ArchiveMap
+
