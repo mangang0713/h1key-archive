@@ -1,0 +1,199 @@
+﻿.map-container {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.cluster-marker,
+.pin-marker {
+  width: 44px;
+  height: 44px;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  background: #6d28d9;
+  color: #fff;
+  font: bold 16px system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
+}
+
+.pin-marker {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pin-marker svg {
+  display: block;
+  width: 44px;
+  height: 44px;
+  fill: #6d28d9;
+  stroke: #fff;
+  stroke-width: 2px;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 30%));
+}
+
+.pin-marker circle,
+.pin-marker text {
+  fill: #fff;
+  stroke: none;
+}
+
+.pin-marker:hover svg {
+  fill: #4c1d95;
+}
+
+.cluster-marker {
+  border-radius: 50%;
+  background: #0f766e;
+  border: 3px double #fff;
+}
+
+.cluster-marker:hover {
+  background: #115e59;
+}
+
+.pin-marker text {
+  font: bold 15px system-ui, sans-serif;
+}
+
+.pin-marker:focus-visible,
+.cluster-marker:focus-visible,
+.map-home:focus-visible,
+.schedule-choice:focus-visible {
+  outline: 3px solid #111;
+  outline-offset: 3px;
+}
+
+.schedule-choice {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #111;
+  background: #f5f3ff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.schedule-choice:hover {
+  background: #ede9fe;
+}
+
+.schedule-choice time,
+.schedule-choice strong,
+.schedule-choice span {
+  display: block;
+}
+
+.schedule-choice time,
+.schedule-choice span {
+  font-size: 12px;
+}
+
+.schedule-details {
+  margin: 12px 0;
+}
+
+.schedule-details dt {
+  font-weight: bold;
+}
+
+.schedule-details dd {
+  margin: 0 0 8px;
+}
+
+.schedule-popup {
+  color: #111;
+  line-height: 1.5;
+  max-height: 40dvh;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  padding-right: 12px;
+}
+
+.archive-map {
+  position: relative;
+}
+
+.map-home {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+}
+
+.map-home svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.map-home:hover {
+  background: #f5f3ff;
+}
+
+@media (max-width: 640px) {
+  .map-home {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .map-home span {
+    display: none;
+  }
+}
+
+.archive-map .maplibregl-popup-close-button {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 24px;
+}
+
+.archive-map .maplibregl-popup-content {
+  padding-top: 44px;
+}
+
+.schedule-popup h2 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.schedule-popup p {
+  margin: 4px 0;
+}
+
+.schedule-popup ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+
+.schedule-popup li + li {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #ddd;
+}
