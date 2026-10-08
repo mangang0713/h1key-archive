@@ -16,13 +16,14 @@ export type ScheduleMedia = {
 }
 
 type Hour = `${'0' | '1'}${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}` | `2${0 | 1 | 2 | 3}`
+type Minute = `${0 | 1 | 2 | 3 | 4 | 5}${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`
 
 export type Schedule = {
   id: string
   locationId: Location['id']
   title: string
   date: string // YYYY-MM-DD
-  startTime?: Hour // HH (00~23), 미확인일 때 생략
+  startTime?: `${Hour}:${Minute}` // HH:mm (00:00~23:59), 미확인일 때 생략
   orderInDay?: number // 같은 날짜의 행사 순서 (1부터), 전체 순번 아님
   media?: ScheduleMedia // 외부 URL만 저장하며 파일을 직접 보관하지 않음
 } & (

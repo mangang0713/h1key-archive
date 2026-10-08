@@ -41,7 +41,7 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
       ['날짜', selected.date.replaceAll('-', '.')],
       ['장소', location.name],
     ]
-    if (selected.startTime !== undefined) fields.push(['시작 시간', `${selected.startTime}시`])
+    if (selected.startTime !== undefined) fields.push(['시작 시간', selected.startTime])
     if (selected.orderInDay !== undefined) fields.push(['당일 순서', `같은 날짜 ${selected.orderInDay}번째 행사`])
     for (const [label, value] of fields) {
       const term = document.createElement('dt')
@@ -104,7 +104,7 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
       title.textContent = schedule.title
       const order = document.createElement('span')
       order.textContent = [
-        schedule.startTime !== undefined ? `${schedule.startTime}시` : '시간 미확인',
+        schedule.startTime !== undefined ? schedule.startTime : '시간 미확인',
         schedule.orderInDay !== undefined ? `같은 날짜 ${schedule.orderInDay}번째 행사` : '당일 순서 미확인',
       ].join(' · ')
       choice.append(date, title, order)
