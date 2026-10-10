@@ -1,75 +1,94 @@
-# React + TypeScript + Vite
+# H1-KEY Activity Archive
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+H1-KEY의 활동 기록을 **지도에서 장소와 날짜를 따라 탐색**할 수 있도록 만드는 인터랙티브 웹 아카이브입니다.
 
-Currently, two official plugins are available:
+각 장소의 스케줄과 무대 기록을 연결해, 활동의 발자취를 한눈에 살펴보고 개별 공연의 추억을 다시 확인하는 것을 목표로 합니다.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+> **개발 중인 프로젝트입니다.** 현재 지도와 스케줄 상세 기능은 가상 테스트 데이터로 동작하며, 실제 H1-KEY 일정·사진·영상은 아직 등록되지 않았습니다.
 
-## React Compiler
+## 주요 기능
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 지도 탐색
+- 대한민국 중심의 **2D 인터랙티브 지도** (MapLibre GL JS)
+- 가까운 **여러 장소를 클러스터로 묶고**, 확대하면 개별 장소 마커로 분리
+- 단일 스케줄 장소는 일반 핀, 여러 일정이 있는 장소는 **일정 개수가 표시된 핀**으로 구분
+- 장소를 선택하면 카메라가 해당 위치로 이동하고, 상세 정보를 닫으면 **선택 전 지도 시점으로 복원**
+- **처음으로** 버튼으로 대한민국 초기 지도 복귀, 모바일 크기에 따른 버튼 UI 조정
 
-## Expanding the ESLint configuration
+### 스케줄 및 세트리스트
+- 장소별 스케줄 **1건은 상세로 바로 이동**, 여러 건은 날짜별 목록에서 선택
+- 행사명, 날짜, 장소, 확인된 시작 시간 및 당일 행사 순서 표시
+- **세트리스트를 공연 순서대로 표시**하고 곡 ID를 통해 곡 정보를 연결
+- 세트리스트 **확인 완료 / 미확인 / 공연 곡 없음** 상태 구분
+- 실제 자료를 넣기 전까지는 가상 테스트 장소·행사·곡만 사용
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 기술 스택
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Frontend:** React, TypeScript, Vite
+- **Map:** MapLibre GL JS
+- **Map style / tiles:** OpenFreeMap (현재 개발용 스타일)
+- **Code quality:** ESLint
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 실행 방법
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Node.js와 npm이 설치된 환경에서:
 
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+터미널에 표시되는 로컬 주소(기본값: `http://localhost:5173`)에서 확인할 수 있습니다.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm run build
+npm run lint
+npm run preview
 ```
+
+- `build`: TypeScript 검사 및 배포용 빌드
+- `lint`: 코드 검사
+- `preview`: 빌드 결과 로컬 미리보기
+
+## 프로젝트 구조
+
+```text
+src/
+├─ components/
+│  └─ map/
+│     ├─ ArchiveMap.tsx           # 지도, 마커, 카메라 및 Popup 연결
+│     ├─ ArchiveMap.css           # 지도 관련 스타일
+│     └─ SchedulePopupContent.ts # 스케줄 목록 및 상세 콘텐츠
+├─ data/
+│  ├─ locations.ts               # 장소 및 좌표
+│  ├─ schedules.ts               # 스케줄 데이터
+│  └─ songs.ts                   # 곡 정보
+├─ types/
+│  └─ archive.ts                 # Location, Schedule, Song 타입
+└─ App.tsx
+```
+
+장소와 스케줄은 **1:N 관계**로 관리하며, 세트리스트에는 곡 제목 대신 곡 ID를 저장합니다.
+
+## 개발 현황
+
+- [x] 대한민국 2D 지도 및 기본 카메라 제어
+- [x] 장소 마커와 클러스터링
+- [x] 동일 장소의 복수 스케줄 목록
+- [x] 스케줄 상세 정보와 세트리스트 표시
+- [x] 장소 선택 시 카메라 이동·복원 및 처음으로 버튼
+- [x] 장소·스케줄·곡 데이터 모델 분리
+- [ ] 실제 활동 스케줄 데이터 입력
+- [ ] 아카이브 맞춤 지도 스타일
+- [ ] 해외 활동 지역 탐색
+- [ ] 사진·영상 콘텐츠 연결
+- [ ] 곡별 공연 횟수 및 특별 무대 표시
+- [ ] 첫 방문 활동 기록 인트로
+
+## 지도 출처
+
+현재 지도에는 OpenFreeMap 스타일과 OpenStreetMap 기반 데이터 등이 사용됩니다. 지도에 표시되는 저작권 및 데이터 출처 표시는 유지합니다.
+
+---
+
+이 README는 **현재 구현된 사용자 기능**을 중심으로 관리합니다. 기능이 추가되거나 사용 방식이 바뀔 때 업데이트하며, 상세한 설계 결정과 개발 과정은 별도 프로젝트 문서에서 기록합니다.
