@@ -1,8 +1,11 @@
-﻿import type { Song } from '../types/archive'
+import type { Song } from '../types/archive'
 
-// 관계와 공연 순서 확인용 가상 곡이며 실제 H1-KEY 곡이 아닙니다.
+// 실제 곡 제목을 사용하는 기능 확인용 목록입니다.
+// 이 곡 목록을 참조하는 schedules.ts의 행사는 모두 가상 일정입니다.
 export const songs: Song[] = [
-  { id: 'test-song-1', title: '[가상 곡] 별빛 산책' },
-  { id: 'test-song-2', title: '[가상 곡] 구름 너머' },
-  { id: 'test-song-3', title: '[가상 곡] 파도의 편지' },
+  { id: 'rose-between-buildings', title: '건물 사이에 피어난 장미' },
+  { id: 'to-my-first-love', title: '나의 첫사랑에게' },
+  { id: 'lets-get-hot', title: '뜨거워지자' },
+  { id: 'it-was-summer', title: '여름이었다' },
+  { id: 'romantic-overdose', title: '낭만한도초과' },
 ]

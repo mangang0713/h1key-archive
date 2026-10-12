@@ -3,6 +3,14 @@ import { locations } from "./locations";
 import { songs } from "./songs";
 
 // 기능 확인용 가상 스케줄이며 실제 H1-KEY 행사가 아닙니다.
+const defaultSetlist = [
+  "rose-between-buildings",
+  "to-my-first-love",
+  "lets-get-hot",
+  "it-was-summer",
+  "romantic-overdose",
+] as const;
+
 export const schedules: Schedule[] = [
   {
     id: "demo-1",
@@ -12,7 +20,7 @@ export const schedules: Schedule[] = [
     startTime: "14:00",
     orderInDay: 1,
     setlistStatus: "known",
-    setlist: ["test-song-1", "test-song-2"],
+    setlist: [...defaultSetlist],
   },
   {
     id: "demo-2",
@@ -22,7 +30,7 @@ export const schedules: Schedule[] = [
     startTime: "18:00",
     orderInDay: 1,
     setlistStatus: "known",
-    setlist: ["test-song-2", "test-song-3"],
+    setlist: [...defaultSetlist],
   },
   {
     id: "demo-3",
@@ -31,7 +39,7 @@ export const schedules: Schedule[] = [
     date: "2099-05-05",
     orderInDay: 1,
     setlistStatus: "known",
-    setlist: ["test-song-3", "test-song-1"],
+    setlist: [...defaultSetlist],
   },
   {
     id: "demo-4",
@@ -41,7 +49,7 @@ export const schedules: Schedule[] = [
     startTime: "13:00",
     orderInDay: 1,
     setlistStatus: "known",
-    setlist: ["test-song-1", "test-song-2", "test-song-3"],
+    setlist: [...defaultSetlist],
   },
   {
     // 같은 날짜의 두 번째 행사: 전체 데이터의 다섯 번째와 구별합니다.
@@ -52,7 +60,7 @@ export const schedules: Schedule[] = [
     startTime: "19:00",
     orderInDay: 2,
     setlistStatus: "known",
-    setlist: ["test-song-3", "test-song-2"],
+    setlist: [...defaultSetlist],
   },
   {
     id: "demo-6",
