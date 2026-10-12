@@ -140,6 +140,101 @@
   box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
 }
 
+.locationless-toggle {
+  position: absolute;
+  top: calc(68px + env(safe-area-inset-top, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+}
+
+.locationless-toggle:hover,
+.locationless-close:hover {
+  background: #f5f3ff;
+}
+
+.locationless-panel {
+  position: absolute;
+  z-index: 2;
+  top: calc(120px + env(safe-area-inset-top, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(70dvh, 640px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  color: #111;
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
+}
+
+.locationless-panel:focus-visible,
+.locationless-toggle:focus-visible,
+.locationless-close:focus-visible {
+  outline: 3px solid #111;
+  outline-offset: 3px;
+}
+
+.locationless-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.locationless-panel-header h2 {
+  margin: 0;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.locationless-close {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin: -8px -8px 0 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #111;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.locationless-demo-notice {
+  margin: 6px 0 12px;
+  color: #555;
+  font-size: 12px;
+}
+
+.locationless-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+
+.locationless-panel li + li {
+  margin-top: 8px;
+}
+
+.locationless-panel .schedule-choice {
+  background: #f8f7fc;
+}
+
+.locationless-panel .schedule-choice:hover {
+  background: #ede9fe;
+}
+
 .map-home svg {
   width: 20px;
   height: 20px;

@@ -15,12 +15,15 @@ export type ScheduleMedia = {
   xPosts?: string[]
 }
 
+export type EventFormat = 'in-person' | 'online' | 'hybrid' | 'unknown'
+
 type Hour = `${'0' | '1'}${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}` | `2${0 | 1 | 2 | 3}`
 type Minute = `${0 | 1 | 2 | 3 | 4 | 5}${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`
 
 export type Schedule = {
   id: string
-  locationId: Location['id']
+  locationId?: Location['id'] // 실제 장소가 없는 온라인 행사나 아직 장소를 모르는 행사에서는 생략
+  eventFormat: EventFormat
   title: string
   date: string // YYYY-MM-DD
   startTime?: `${Hour}:${Minute}` // HH:mm (00:00~23:59), 미확인일 때 생략
