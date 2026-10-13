@@ -45,12 +45,13 @@ const locationPoints: FeatureCollection<Point> = {
     properties: { locationId: location.id },
   })),
 }
-const foreignRegionLabels: Array<{ countryCode: Exclude<CountryCode, 'KR'>; label: string }> = [
+const regionLabels: Array<{ countryCode: CountryCode; label: string }> = [
+  { countryCode: 'KR', label: '한국' },
   { countryCode: 'CN', label: '중국' },
   { countryCode: 'JP', label: '일본' },
   { countryCode: 'TH', label: '태국' },
 ]
-const foreignRegions = foreignRegionLabels.map(({ countryCode, label }) => {
+const archiveRegions = regionLabels.map(({ countryCode, label }) => {
   const regionLocations = locations.filter((location): location is MappedLocation =>
     (location.countryCode ?? 'KR') === countryCode && hasCoordinates(location)
       && (schedulesByLocation.get(location.id)?.length ?? 0) > 0)
@@ -60,6 +61,27 @@ const foreignRegions = foreignRegionLabels.map(({ countryCode, label }) => {
   )
   return { countryCode, label, locations: regionLocations, scheduleCount }
 }).filter((region) => region.locations.length > 0)
+
+// 지도 중심에서 가장 가까운 일정 장소의 국가를 현재 탐색 지역으로 사용합니다.
+function nearestRegionCode(center: [number, number]): CountryCode {
+  const [longitude, latitude] = center
+  let nearestCode: CountryCode = 'KR'
+  let nearestDistance = Infinity
+  for (const region of archiveRegions) {
+    for (const location of region.locations) {
+      const latitudeScale = Math.cos(((location.coordinates[1] + latitude) / 2) * Math.PI / 180)
+      const distance = Math.hypot(
+        (location.coordinates[0] - longitude) * latitudeScale,
+        location.coordinates[1] - latitude,
+      )
+      if (distance < nearestDistance) {
+        nearestDistance = distance
+        nearestCode = region.countryCode
+      }
+    }
+  }
+  return nearestCode
+}
 
 function ArchiveMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -72,6 +94,8 @@ function ArchiveMap() {
   const [locationlessOpen, setLocationlessOpen] = useState(false)
   const [locationlessSelected, setLocationlessSelected] = useState<Schedule>()
   const [regionNavigationOpen, setRegionNavigationOpen] = useState(false)
+  const [currentRegionCode, setCurrentRegionCode] = useState<CountryCode>('KR')
+  const otherRegions = archiveRegions.filter((region) => region.countryCode !== currentRegionCode)
 
   useEffect(() => {
     if (regionNavigationOpen) regionPanelRef.current?.focus()
@@ -97,12 +121,14 @@ function ArchiveMap() {
     const popup = new Popup({ maxWidth: 'min(300px, calc(100vw - 24px))', offset: 48, anchor: 'bottom' })
     let savedCamera: SavedCamera | undefined
     let selectedLocationId: string | undefined
+    let selectedLocationCenter: [number, number] | undefined
     let cameraRequest = 0
     const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : CAMERA_DURATION
     const discardSelection = () => {
       // 처음으로/클러스터 선택은 이전 카메라로 복원하지 않습니다.
       savedCamera = undefined
       selectedLocationId = undefined
+      selectedLocationCenter = undefined
       popup.remove()
     }
     let popupEvents: AbortController | undefined
@@ -113,12 +139,14 @@ function ArchiveMap() {
     const closeSelection = () => {
       clearPopupEvents()
       const previous = savedCamera
+      const selectedCenter = selectedLocationCenter
       savedCamera = undefined
       selectedLocationId = undefined
+      selectedLocationCenter = undefined
       if (disposed || !previous) return
       cameraRequest++
       map.stop()
-      map.easeTo({ ...previous, duration: duration() })
+      map.easeTo({ ...previous, center: selectedCenter ?? previous.center, duration: duration() })
       map.getCanvas().focus()
     }
     dismissMapSelectionRef.current = () => {
@@ -153,8 +181,9 @@ function ArchiveMap() {
       if (!map.isMoving()) finish()
     })
     const navigateToRegion = (countryCode: CountryCode) => {
-      const region = foreignRegions.find((candidate) => candidate.countryCode === countryCode)
+      const region = archiveRegions.find((candidate) => candidate.countryCode === countryCode)
       if (!region || region.locations.length === 0) return
+      setCurrentRegionCode(countryCode)
       const bounds = region.locations.reduce(
         (result, location) => result.extend(location.coordinates),
         new LngLatBounds(region.locations[0].coordinates, region.locations[0].coordinates),
@@ -198,6 +227,7 @@ function ArchiveMap() {
       setLocationlessOpen(false)
       setLocationlessSelected(undefined)
       setRegionNavigationOpen(false)
+      setCurrentRegionCode('KR')
       map.easeTo({ ...INITIAL_CAMERA, duration: duration() })
     }
     const homeButton = homeButtonRef.current
@@ -246,6 +276,7 @@ function ArchiveMap() {
           duration: duration(),
         })
       }
+      selectedLocationCenter = location.coordinates
       const locationSchedules = schedulesByLocation.get(location.id) ?? []
       openPopup(location, locationSchedules.length === 1 ? locationSchedules[0] : undefined)
     }
@@ -358,6 +389,12 @@ function ArchiveMap() {
     }
     map.on('load', addLocations)
     map.on('render', updateMarkers)
+    const updateCurrentRegion = () => {
+      const center = map.getCenter()
+      const nextRegion = nearestRegionCode([center.lng, center.lat])
+      setCurrentRegionCode((current) => current === nextRegion ? current : nextRegion)
+    }
+    map.on('moveend', updateCurrentRegion)
 
     return () => {
       disposed = true
@@ -366,6 +403,7 @@ function ArchiveMap() {
       map.stop()
       map.off('load', addLocations)
       map.off('render', updateMarkers)
+      map.off('moveend', updateCurrentRegion)
       visibleMarkers.forEach((entry) => entry.remove())
       visibleMarkers.clear()
       popup.remove()
@@ -378,7 +416,15 @@ function ArchiveMap() {
   }, [])
 
   return (
-    <main className="archive-map">
+    <main
+      className="archive-map"
+      onPointerDown={(event) => {
+        if (!locationlessOpen || !(event.target instanceof Element)) return
+        if (event.target.closest('#locationless-schedules, .archive-explorer-actions')) return
+        setLocationlessOpen(false)
+        setLocationlessSelected(undefined)
+      }}
+    >
       <div
         ref={mapContainerRef}
         className="map-container"
@@ -389,11 +435,11 @@ function ArchiveMap() {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3Z" /></svg>
         <span>처음으로</span>
       </button>
-      {(foreignRegions.length > 0 || videoCallSchedules.length > 0) && (
+      {(otherRegions.length > 0 || videoCallSchedules.length > 0) && (
         <section className="archive-explorer" aria-label="아카이브 탐색">
           <h2 className="archive-explorer-title">아카이브 탐색</h2>
           <div className="archive-explorer-actions">
-            {foreignRegions.length > 0 && (
+            {otherRegions.length > 0 && (
               <button
                 ref={regionNavigationButtonRef}
                 type="button"
@@ -411,8 +457,8 @@ function ArchiveMap() {
                 <span className="archive-explorer-icon archive-explorer-icon-region" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>
                 </span>
-                <span className="archive-explorer-label">해외 지역</span>
-                <span className="archive-explorer-count">{foreignRegions.length}개국</span>
+                <span className="archive-explorer-label">지역 이동</span>
+                <span className="archive-explorer-count">{otherRegions.length}개국</span>
               </button>
             )}
             {videoCallSchedules.length > 0 && (
@@ -445,7 +491,7 @@ function ArchiveMap() {
               ref={regionPanelRef}
               id="region-navigation-panel"
               className="region-navigation-panel"
-              aria-label="해외 활동 지역 이동"
+              aria-label="이동할 지역 선택"
               tabIndex={-1}
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
@@ -455,11 +501,11 @@ function ArchiveMap() {
               }}
             >
               <header>
-                <h2>해외 활동 지역</h2>
+                <h2>이동할 지역 선택</h2>
                 <button
                   type="button"
                   className="region-navigation-close"
-                  aria-label="해외 지역 메뉴 닫기"
+                  aria-label="지역 선택 메뉴 닫기"
                   onClick={() => {
                     setRegionNavigationOpen(false)
                     regionNavigationButtonRef.current?.focus()
@@ -467,7 +513,7 @@ function ArchiveMap() {
                 >×</button>
               </header>
               <ul>
-                {foreignRegions.map((region) => (
+                {otherRegions.map((region) => (
                   <li key={region.countryCode}>
                     <button
                       type="button"
