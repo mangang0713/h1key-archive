@@ -58,11 +58,14 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     const setlistHeading = document.createElement('h3')
     setlistHeading.textContent = '세트리스트'
     content.append(setlistHeading)
-    if (selected.setlistStatus === 'known' || selected.setlistStatus === 'provisional') {
+    if (selected.setlistStatus === 'known' || selected.setlistStatus === 'partial' || selected.setlistStatus === 'provisional') {
       const status = document.createElement('p')
-      status.textContent = selected.setlistStatus === 'known'
-        ? '확인 완료 · 공연 순서'
-        : '기본 입력 · 실제 세트리스트 확인 필요'
+      const statusText = {
+        known: '확인 완료 · 공연 순서',
+        partial: '부분 확인 · 확인된 곡만 표시',
+        provisional: '기본 입력 · 실제 세트리스트 확인 필요',
+      } as const
+      status.textContent = statusText[selected.setlistStatus]
       const setlist = document.createElement('ol')
       setlist.className = 'schedule-setlist'
       selected.setlist.forEach((songId, index) => {

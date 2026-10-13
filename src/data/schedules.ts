@@ -2,15 +2,7 @@ import type { Schedule } from '../types/archive'
 import { locations } from './locations'
 import { songs } from './songs'
 
-// 사용자 제공 확정 일정 시트에서 옮긴 기록입니다. 기본 5곡은 실제 공연 확인 전까지 임시값입니다.
-const defaultSetlist = [
-  'rose-between-buildings',
-  'to-my-first-love',
-  'lets-get-hot',
-  'it-was-summer',
-  'romantic-overdose',
-] as const
-
+// 사용자 확인 스프레드시트의 일정과 세트리스트입니다.
 export const schedules: Schedule[] = [
   {
     "id": "schedule-2026-02-21-01",
@@ -18,8 +10,8 @@ export const schedules: Schedule[] = [
     "eventFormat": "in-person",
     "title": "🎂HAPPY RIINA DAY🎂",
     "date": "2026-02-21",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-02-26-01",
@@ -28,8 +20,14 @@ export const schedules: Schedule[] = [
     "title": "2026학년도 영남대학교 입학식 및 신입생 환영회",
     "date": "2026-02-26",
     "startTime": "14:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "world-is-not-like-a-movie",
+      "low-key-scared-but-h1-key-ready",
+      "it-was-summer",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-02-27-01",
@@ -38,8 +36,8 @@ export const schedules: Schedule[] = [
     "title": "2026 ONE FORCE",
     "date": "2026-02-27",
     "startTime": "14:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-03-05-01",
@@ -48,8 +46,10 @@ export const schedules: Schedule[] = [
     "title": "Mnet 엠카운트다운",
     "date": "2026-03-05",
     "startTime": "18:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-06-01",
@@ -58,8 +58,10 @@ export const schedules: Schedule[] = [
     "title": "KBS2 뮤직뱅크",
     "date": "2026-03-06",
     "startTime": "17:05",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-07-01",
@@ -68,8 +70,10 @@ export const schedules: Schedule[] = [
     "title": "MBC 쇼! 음악중심",
     "date": "2026-03-07",
     "startTime": "15:20",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-08-01",
@@ -79,8 +83,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-08",
     "startTime": "15:20",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-08-02",
@@ -90,8 +96,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-08",
     "startTime": "19:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-10-01",
@@ -100,8 +108,8 @@ export const schedules: Schedule[] = [
     "title": "EBS 라디오 청소년소통프로젝트 경청",
     "date": "2026-03-10",
     "startTime": "22:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-03-11-01",
@@ -111,8 +119,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-11",
     "startTime": "17:00",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-11-02",
@@ -122,8 +132,12 @@ export const schedules: Schedule[] = [
     "date": "2026-03-11",
     "startTime": "20:50",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "world-is-not-like-a-movie",
+      "it-was-summer"
+    ]
   },
   {
     "id": "schedule-2026-03-12-01",
@@ -132,8 +146,10 @@ export const schedules: Schedule[] = [
     "title": "Mnet 엠카운트다운",
     "date": "2026-03-12",
     "startTime": "18:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-13-01",
@@ -143,8 +159,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-13",
     "startTime": "17:05",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-13-02",
@@ -154,8 +172,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-13",
     "startTime": "20:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-14-01",
@@ -164,8 +184,10 @@ export const schedules: Schedule[] = [
     "title": "MBC 쇼! 음악중심",
     "date": "2026-03-14",
     "startTime": "15:20",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-15-01",
@@ -175,8 +197,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-15",
     "startTime": "15:30",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-15-02",
@@ -186,8 +210,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-15",
     "startTime": "18:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-18-01",
@@ -196,8 +222,10 @@ export const schedules: Schedule[] = [
     "title": "MBC M 쇼! 챔피언",
     "date": "2026-03-18",
     "startTime": "17:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-19-01",
@@ -206,8 +234,10 @@ export const schedules: Schedule[] = [
     "title": "Mnet 엠카운트다운",
     "date": "2026-03-19",
     "startTime": "18:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-20-01",
@@ -216,8 +246,10 @@ export const schedules: Schedule[] = [
     "title": "KBS2 뮤직뱅크",
     "date": "2026-03-20",
     "startTime": "17:05",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-21-01",
@@ -226,8 +258,10 @@ export const schedules: Schedule[] = [
     "title": "MBC 쇼! 음악중심",
     "date": "2026-03-21",
     "startTime": "15:20",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-22-01",
@@ -237,8 +271,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-22",
     "startTime": "15:20",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-22-02",
@@ -248,8 +284,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-22",
     "startTime": "18:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-25-01",
@@ -258,8 +296,10 @@ export const schedules: Schedule[] = [
     "title": "MBC M 쇼! 챔피언",
     "date": "2026-03-25",
     "startTime": "17:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-27-01",
@@ -269,8 +309,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-27",
     "startTime": "17:05",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-27-02",
@@ -280,8 +322,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-27",
     "startTime": "20:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-29-01",
@@ -291,8 +335,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-29",
     "startTime": "15:15",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-29-02",
@@ -302,8 +348,10 @@ export const schedules: Schedule[] = [
     "date": "2026-03-29",
     "startTime": "18:30",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-03-31-01",
@@ -312,8 +360,10 @@ export const schedules: Schedule[] = [
     "title": "ENA 케이팝업 차트쇼",
     "date": "2026-03-31",
     "startTime": "17:40",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-04-03-01",
@@ -322,8 +372,14 @@ export const schedules: Schedule[] = [
     "title": "제 64회 경북도민체육대회",
     "date": "2026-04-03",
     "startTime": "16:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "good-for-u",
+      "it-was-summer",
+      "heart-light"
+    ]
   },
   {
     "id": "schedule-2026-04-05-01",
@@ -332,8 +388,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (메이크스타 2차)",
     "date": "2026-04-05",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-04-09-01",
@@ -342,8 +400,14 @@ export const schedules: Schedule[] = [
     "title": "2026학년도 목원대학교 입춘제 [함께 이어, 봄]",
     "date": "2026-04-09",
     "startTime": "19:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "good-for-u",
+      "it-was-summer",
+      "heart-light"
+    ]
   },
   {
     "id": "schedule-2026-04-10-01",
@@ -353,8 +417,10 @@ export const schedules: Schedule[] = [
     "date": "2026-04-10",
     "startTime": "13:00",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-04-10-02",
@@ -364,8 +430,12 @@ export const schedules: Schedule[] = [
     "date": "2026-04-10",
     "startTime": "16:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "it-was-summer",
+      "rose-between-buildings"
+    ]
   },
   {
     "id": "schedule-2026-04-11-01",
@@ -373,8 +443,8 @@ export const schedules: Schedule[] = [
     "eventFormat": "in-person",
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 상하이 대면 팬이벤트 (iminitv)",
     "date": "2026-04-11",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-04-17-01",
@@ -383,8 +453,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (케이팝투게더 1차)",
     "date": "2026-04-17",
     "startTime": "20:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-04-18-01",
@@ -393,8 +465,10 @@ export const schedules: Schedule[] = [
     "title": "SBS 열혈농구단 전국 최강전 2경기",
     "date": "2026-04-18",
     "startTime": "15:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "it-was-summer"
+    ]
   },
   {
     "id": "schedule-2026-04-19-01",
@@ -403,8 +477,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (마이스타굿즈 2차)",
     "date": "2026-04-19",
     "startTime": "17:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-04-24-01",
@@ -413,8 +489,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (에버라인 2차)",
     "date": "2026-04-24",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-04-25-01",
@@ -424,8 +502,11 @@ export const schedules: Schedule[] = [
     "date": "2026-04-25",
     "startTime": "17:00",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "it-was-summer",
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-04-25-02",
@@ -435,8 +516,10 @@ export const schedules: Schedule[] = [
     "date": "2026-04-25",
     "startTime": "20:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-04-30-01",
@@ -445,8 +528,14 @@ export const schedules: Schedule[] = [
     "title": "2026년도 전북대학교 동아리 대축제 동인제",
     "date": "2026-04-30",
     "startTime": "18:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-05-02-01",
@@ -455,8 +544,12 @@ export const schedules: Schedule[] = [
     "title": "SBS 파워FM 황제성의 황제파워 공개방송 In 제65회 성웅 이순신축제",
     "date": "2026-05-02",
     "startTime": "19:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "it-was-summer",
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-05-03-01",
@@ -465,8 +558,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (케이팝투게더 2차)",
     "date": "2026-05-03",
     "startTime": "16:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-05-04-01",
@@ -475,8 +570,14 @@ export const schedules: Schedule[] = [
     "title": "우송정보대학 우정 Culture Festival",
     "date": "2026-05-04",
     "startTime": "21:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-05-07-01",
@@ -485,8 +586,14 @@ export const schedules: Schedule[] = [
     "title": "포항공과대학교 2026 해맞이한마당",
     "date": "2026-05-07",
     "startTime": "22:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-05-08-01",
@@ -495,8 +602,14 @@ export const schedules: Schedule[] = [
     "title": "2026 유성온천 문화축제",
     "date": "2026-05-08",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-05-09-01",
@@ -505,8 +618,8 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 카페&영상통화 팬사인회 (에버라인 3차)",
     "date": "2026-05-09",
     "startTime": "14:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-05-10-01",
@@ -515,8 +628,14 @@ export const schedules: Schedule[] = [
     "title": "제 68회 밀양아리랑대축제 [밀양시민 열린음악회]",
     "date": "2026-05-10",
     "startTime": "20:10",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-05-11-01",
@@ -525,8 +644,14 @@ export const schedules: Schedule[] = [
     "title": "예원예술대학교 만인동락제",
     "date": "2026-05-11",
     "startTime": "20:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "good-for-u",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-05-12-01",
@@ -536,8 +661,11 @@ export const schedules: Schedule[] = [
     "date": "2026-05-12",
     "startTime": "19:20",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings"
+    ]
   },
   {
     "id": "schedule-2026-05-12-02",
@@ -547,8 +675,14 @@ export const schedules: Schedule[] = [
     "date": "2026-05-12",
     "startTime": "21:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer",
+      "good-for-u",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-05-13-01",
@@ -558,8 +692,14 @@ export const schedules: Schedule[] = [
     "date": "2026-05-13",
     "startTime": "17:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-05-13-02",
@@ -569,8 +709,14 @@ export const schedules: Schedule[] = [
     "date": "2026-05-13",
     "startTime": "17:00",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-05-14-01",
@@ -579,8 +725,14 @@ export const schedules: Schedule[] = [
     "title": "2026 대구대학교 대동제 여:흥",
     "date": "2026-05-14",
     "startTime": "19:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "world-is-not-like-a-movie",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-05-15-01",
@@ -588,8 +740,14 @@ export const schedules: Schedule[] = [
     "eventFormat": "in-person",
     "title": "2026년 숭실대학교 대동제 ‘청람:淸覽’",
     "date": "2026-05-15",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "romantic-overdose",
+      "it-was-summer",
+      "heart-light"
+    ]
   },
   {
     "id": "schedule-2026-05-16-01",
@@ -598,8 +756,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (마이스타굿즈 3차)",
     "date": "2026-05-16",
     "startTime": "14:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-05-17-01",
@@ -608,8 +768,11 @@ export const schedules: Schedule[] = [
     "title": "하나은행 K리그2 2026 12R [성남FC vs 경남FC]",
     "date": "2026-05-17",
     "startTime": "16:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "it-was-summer"
+    ]
   },
   {
     "id": "schedule-2026-05-19-01",
@@ -617,8 +780,8 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 영상통화 팬사인회 (imini tv)",
     "date": "2026-05-19",
     "startTime": "20:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-05-20-01",
@@ -627,8 +790,14 @@ export const schedules: Schedule[] = [
     "title": "2026학년도 제29회 위덕대학교 미르대동제",
     "date": "2026-05-20",
     "startTime": "19:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "it-was-summer",
+      "romantic-overdose",
+      "heart-light"
+    ]
   },
   {
     "id": "schedule-2026-05-21-01",
@@ -637,8 +806,14 @@ export const schedules: Schedule[] = [
     "title": "신안산대학교 2026 제32회 SAU FESTIVAL",
     "date": "2026-05-21",
     "startTime": "19:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-05-23-01",
@@ -646,8 +821,8 @@ export const schedules: Schedule[] = [
     "eventFormat": "in-person",
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 광저우 대면 팬이벤트 (iminitv)_중국 마지막 이벤트",
     "date": "2026-05-23",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-05-26-01",
@@ -656,8 +831,14 @@ export const schedules: Schedule[] = [
     "title": "한국에너지공과대학교 2026 KENTECH Festival : Liberté",
     "date": "2026-05-26",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "it-was-summer",
+      "romantic-overdose",
+      "heart-light"
+    ]
   },
   {
     "id": "schedule-2026-05-27-01",
@@ -667,8 +848,14 @@ export const schedules: Schedule[] = [
     "date": "2026-05-27",
     "startTime": "21:00",
     "orderInDay": 2,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "it-was-summer",
+      "romantic-overdose",
+      "heart-light"
+    ]
   },
   {
     "id": "schedule-2026-05-27-02",
@@ -678,8 +865,14 @@ export const schedules: Schedule[] = [
     "date": "2026-05-27",
     "startTime": "21:00",
     "orderInDay": 1,
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "romantic-overdose",
+      "it-was-summer",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-05-29-01",
@@ -688,8 +881,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 포토&대면&영상통화 팬사인회 (디어마이뮤즈 4차)",
     "date": "2026-05-29",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-05-30-01",
@@ -698,8 +893,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (메이크스타 3차)",
     "date": "2026-05-30",
     "startTime": "13:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-06-05-01",
@@ -708,8 +905,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (제이제이뮤즈 2차)",
     "date": "2026-06-05",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-06-12-01",
@@ -718,8 +917,12 @@ export const schedules: Schedule[] = [
     "title": "제36회 한산모시문화제",
     "date": "2026-06-12",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "it-was-summer"
+    ]
   },
   {
     "id": "schedule-2026-06-13-01",
@@ -728,8 +931,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&포토&영상통화 팬사인회 (에버라인 4차)",
     "date": "2026-06-13",
     "startTime": "15:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-06-16-01",
@@ -737,8 +942,8 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 영상통화 팬사인회 (마이스타굿즈 4차)",
     "date": "2026-06-16",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-06-19-01",
@@ -746,8 +951,8 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 영상통화 팬사인회 (디어마이뮤즈 5차)",
     "date": "2026-06-19",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-06-28-01",
@@ -755,8 +960,14 @@ export const schedules: Schedule[] = [
     "eventFormat": "in-person",
     "title": "2026 H1-KEY 1st FANMEETING in Japan : THE FIRST KEY",
     "date": "2026-06-28",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose",
+      "kawaii-dakeja-dame-desuka-cover",
+      "rose-between-buildings"
+    ]
   },
   {
     "id": "schedule-2026-07-05-01",
@@ -765,8 +976,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&포토&영상통화 팬사인회 (에버라인 5차)",
     "date": "2026-07-05",
     "startTime": "13:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-07-08-01",
@@ -774,8 +987,8 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 영상통화 팬사인회 (마이스타굿즈 5차)",
     "date": "2026-07-08",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-07-18-01",
@@ -784,8 +997,14 @@ export const schedules: Schedule[] = [
     "title": "2026 YEOSU with MyK FESTA",
     "date": "2026-07-18",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "lets-get-hot",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-07-24-01",
@@ -794,8 +1013,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (메이크스타 4차)",
     "date": "2026-07-24",
     "startTime": "20:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-07-25-01",
@@ -804,8 +1025,11 @@ export const schedules: Schedule[] = [
     "title": "제29회 보령머드축제 K-POP SUPER LIVE",
     "date": "2026-07-25",
     "startTime": "19:20",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "it-was-summer"
+    ]
   },
   {
     "id": "schedule-2026-07-26-01",
@@ -814,8 +1038,15 @@ export const schedules: Schedule[] = [
     "title": "워터밤 서울 2026",
     "date": "2026-07-26",
     "startTime": "13:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "lets-get-hot",
+      "to-my-first-love",
+      "shake-it-cover",
+      "it-was-summer",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-07-31-01",
@@ -824,8 +1055,14 @@ export const schedules: Schedule[] = [
     "title": "2026 정읍 물빛축제",
     "date": "2026-07-31",
     "startTime": "19:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "dont-let-the-light-go-out",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-08-01-01",
@@ -834,8 +1071,14 @@ export const schedules: Schedule[] = [
     "title": "2026 양양 서머 페스티벌",
     "date": "2026-08-01",
     "startTime": "20:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "lets-get-hot",
+      "to-my-first-love",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-08-08-01",
@@ -844,8 +1087,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&포토&영상통화 팬사인회 (에버라인 6차)",
     "date": "2026-08-08",
     "startTime": "13:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-08-10-01",
@@ -854,8 +1099,14 @@ export const schedules: Schedule[] = [
     "title": "힘내YOU+ CONCERT in 광주",
     "date": "2026-08-10",
     "startTime": "15:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "lets-get-hot",
+      "it-was-summer",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-08-25-01",
@@ -864,8 +1115,10 @@ export const schedules: Schedule[] = [
     "title": "2026 KT 워터페스티벌",
     "date": "2026-08-25",
     "startTime": "18:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "it-was-summer"
+    ]
   },
   {
     "id": "schedule-2026-08-27-01",
@@ -873,8 +1126,8 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 영상통화 팬사인회 (마이스타굿즈 7차)",
     "date": "2026-08-27",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-08-29-01",
@@ -883,8 +1136,13 @@ export const schedules: Schedule[] = [
     "title": "김구 탄생 150주년 광화문광장 국민참여 K-POP RANDOM PLAY DANCE",
     "date": "2026-08-29",
     "startTime": "14:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "seoul",
+      "rose-between-buildings",
+      "it-was-summer",
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-08-30-01",
@@ -893,8 +1151,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (에버라인 7차)",
     "date": "2026-08-30",
     "startTime": "13:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-09-01-01",
@@ -903,8 +1163,8 @@ export const schedules: Schedule[] = [
     "title": "2027 S/S 서울패션위크 - 리이(RE RHEE)",
     "date": "2026-09-01",
     "startTime": "11:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "none",
+    "setlist": []
   },
   {
     "id": "schedule-2026-09-05-01",
@@ -913,8 +1173,14 @@ export const schedules: Schedule[] = [
     "title": "무주 태권도원 2026 세계태권도 그랑프리 시리즈",
     "date": "2026-09-05",
     "startTime": "14:40",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "lets-get-hot",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-09-06-01",
@@ -923,8 +1189,10 @@ export const schedules: Schedule[] = [
     "title": "H1-KEY 5th Mini Album [LOVECHAPTER] 발매 기념 대면&영상통화 팬사인회 (메이크스타 5차) - 마지막 팬사인회",
     "date": "2026-09-06",
     "startTime": "13:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-09-09-01",
@@ -933,8 +1201,14 @@ export const schedules: Schedule[] = [
     "title": "안동과학대학교 <2026 함백축제>",
     "date": "2026-09-09",
     "startTime": "20:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "lets-get-hot",
+      "rose-between-buildings",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-09-10-01",
@@ -943,8 +1217,14 @@ export const schedules: Schedule[] = [
     "title": "2026 서울대학교 공자농자첨 연합축제 BLUEPRINT",
     "date": "2026-09-10",
     "startTime": "20:20",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "lets-get-hot",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-09-11-01",
@@ -953,8 +1233,14 @@ export const schedules: Schedule[] = [
     "title": "2026 제30회 무주반딧불축제",
     "date": "2026-09-11",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "lets-get-hot",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-09-14-01",
@@ -963,8 +1249,14 @@ export const schedules: Schedule[] = [
     "title": "2026 국립경국대학교 예천캠퍼스 <솔개뜰 어울마당>",
     "date": "2026-09-14",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "lets-get-hot",
+      "it-was-summer",
+      "heart-light"
+    ]
   },
   {
     "id": "schedule-2026-09-17-01",
@@ -973,8 +1265,14 @@ export const schedules: Schedule[] = [
     "title": "2026 포항대학교 「청야(清夜)」",
     "date": "2026-09-17",
     "startTime": "19:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "lets-get-hot",
+      "it-was-summer",
+      "heart-light"
+    ]
   },
   {
     "id": "schedule-2026-09-18-01",
@@ -983,8 +1281,14 @@ export const schedules: Schedule[] = [
     "title": "2026 경기대학교 서울캠퍼스 귀룡제 ₊˚.Deja Vu｡･",
     "date": "2026-09-18",
     "startTime": "20:10",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "lets-get-hot",
+      "it-was-summer",
+      "heart-light"
+    ]
   },
   {
     "id": "schedule-2026-09-19-01",
@@ -993,8 +1297,14 @@ export const schedules: Schedule[] = [
     "title": "2026 청춘커피 페스티벌",
     "date": "2026-09-19",
     "startTime": "16:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "lets-get-hot",
+      "it-was-summer",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-09-22-01",
@@ -1003,8 +1313,14 @@ export const schedules: Schedule[] = [
     "title": "2026 전주대학교 연합축제 『영원할 순간, 낭만을 품다』",
     "date": "2026-09-22",
     "startTime": "22:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "lets-get-hot",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-09-28-01",
@@ -1013,8 +1329,14 @@ export const schedules: Schedule[] = [
     "title": "2026 충남대학교 Engineering Fair",
     "date": "2026-09-28",
     "startTime": "20:30",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "dont-let-the-light-go-out",
+      "it-was-summer",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-09-30-01",
@@ -1023,8 +1345,14 @@ export const schedules: Schedule[] = [
     "title": "2026 두원공과대학교 천마대동제",
     "date": "2026-09-30",
     "startTime": "18:10",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "to-my-first-love",
+      "lets-get-hot",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-10-01-01",
@@ -1033,8 +1361,14 @@ export const schedules: Schedule[] = [
     "title": "2026 충북대학교 개신대동제 Everis",
     "date": "2026-10-01",
     "startTime": "20:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "lets-get-hot",
+      "it-was-summer",
+      "romantic-overdose"
+    ]
   },
   {
     "id": "schedule-2026-10-02-01",
@@ -1043,8 +1377,14 @@ export const schedules: Schedule[] = [
     "title": "2026 군산시간여행축제 시간여행콘서트",
     "date": "2026-10-02",
     "startTime": "21:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "rose-between-buildings",
+      "it-was-summer",
+      "good-for-u",
+      "heart-light",
+      "to-my-first-love"
+    ]
   },
   {
     "id": "schedule-2026-10-03-01",
@@ -1053,8 +1393,14 @@ export const schedules: Schedule[] = [
     "title": "2026 거창한마당대축제",
     "date": "2026-10-03",
     "startTime": "19:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "dont-let-the-light-go-out",
+      "it-was-summer",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-10-10-01",
@@ -1063,8 +1409,14 @@ export const schedules: Schedule[] = [
     "title": "전국우수시장박람회",
     "date": "2026-10-10",
     "startTime": "17:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "world-is-not-like-a-movie",
+      "it-was-summer",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-10-11-01",
@@ -1073,8 +1425,14 @@ export const schedules: Schedule[] = [
     "title": "제24회 포천시민의 날",
     "date": "2026-10-11",
     "startTime": "19:15",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "known",
+    "setlist": [
+      "to-my-first-love",
+      "rose-between-buildings",
+      "world-is-not-like-a-movie",
+      "it-was-summer",
+      "good-for-u"
+    ]
   },
   {
     "id": "schedule-2026-10-15-01",
@@ -1083,8 +1441,8 @@ export const schedules: Schedule[] = [
     "title": "2026 김천시민 체육대회",
     "date": "2026-10-15",
     "startTime": "09:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "unknown",
+    "setlist": []
   },
   {
     "id": "schedule-2026-10-16-01",
@@ -1093,8 +1451,8 @@ export const schedules: Schedule[] = [
     "title": "LEAGUE OF ART Season 3",
     "date": "2026-10-16",
     "startTime": "18:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "unknown",
+    "setlist": []
   },
   {
     "id": "schedule-2026-10-17-01",
@@ -1102,8 +1460,8 @@ export const schedules: Schedule[] = [
     "title": "2026 스포츠 가치데이 페스티벌",
     "date": "2026-10-17",
     "startTime": "17:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
+    "setlistStatus": "unknown",
+    "setlist": []
   },
   {
     "id": "schedule-2026-10-18-01",
@@ -1112,9 +1470,9 @@ export const schedules: Schedule[] = [
     "title": "2026 헬로 DDC 페스티벌",
     "date": "2026-10-18",
     "startTime": "14:00",
-    "setlistStatus": "provisional",
-    "setlist": [...defaultSetlist],
-  },
+    "setlistStatus": "unknown",
+    "setlist": []
+  }
 ]
 
 // 새 데이터를 추가할 때 잘못된 ID 연결과 같은 날짜의 순서 중복을 발견합니다.

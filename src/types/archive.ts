@@ -36,6 +36,7 @@ export type Schedule = {
 } & (
   // 배열 순서는 공연 순서입니다. 곡별 누적 공연 순번은 저장하지 않습니다.
   | { setlistStatus: 'known'; setlist: [Song['id'], ...Song['id'][]] }
+  | { setlistStatus: 'partial'; setlist: [Song['id'], ...Song['id'][]] } // 일부 곡과 확인된 순서만 기록
   | { setlistStatus: 'provisional'; setlist: [Song['id'], ...Song['id'][]] } // 기본 입력값이며 실제 공연 내용 확인 전
   | { setlistStatus: 'unknown'; setlist: [] } // 세트리스트 미확인
   | { setlistStatus: 'none'; setlist: [] } // 곡 공연이 없었음을 확인
