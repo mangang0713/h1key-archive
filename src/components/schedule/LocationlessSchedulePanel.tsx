@@ -45,7 +45,6 @@ function LocationlessSchedulePanel({ schedules, selected, onSelect, onBack, onCl
             <dt>형식</dt><dd>{selected.eventFormat === 'online' ? '온라인' : selected.eventFormat === 'hybrid' ? '온라인·오프라인' : selected.eventFormat === 'unknown' ? '형식 미확인' : '오프라인'}</dd>
             <dt>장소</dt><dd>{selected.eventFormat === 'online' ? '온라인 행사 · 오프라인 장소 없음' : '장소 미확인'}</dd>
             {selected.startTime !== undefined && <><dt>시작 시간</dt><dd>{selected.startTime}</dd></>}
-            {selected.orderInDay !== undefined && <><dt>당일 순서</dt><dd>같은 날짜 {selected.orderInDay}번째 행사</dd></>}
           </dl>
           {selected.eventFormat !== 'online' && (
             <>
@@ -74,17 +73,12 @@ function LocationlessSchedulePanel({ schedules, selected, onSelect, onBack, onCl
       ) : (
         <ul>
           {schedules.map((schedule) => {
-            const details = [
-              schedule.startTime,
-              schedule.orderInDay !== undefined ? `같은 날짜 ${schedule.orderInDay}번째 행사` : undefined,
-            ].filter((detail): detail is string => detail !== undefined)
-
             return (
               <li key={schedule.id}>
                 <button type="button" className="schedule-choice" onClick={() => onSelect(schedule)}>
                   <time dateTime={schedule.date}>{schedule.date.replaceAll('-', '.')}</time>
                   <strong>{schedule.title}</strong>
-                  {details.length > 0 && <span>{details.join(' · ')}</span>}
+                  {schedule.startTime !== undefined && <span>{schedule.startTime}</span>}
                 </button>
               </li>
             )

@@ -116,7 +116,6 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
             <dt>장소</dt><dd>{detailLocation?.name ?? (selectedSchedule.eventFormat === 'online' ? '온라인 · 실제 장소 없음' : '장소 미확인')}</dd>
             {detailLocation?.address && <><dt>주소</dt><dd>{detailLocation.address}</dd></>}
             {selectedSchedule.startTime && <><dt>시작 시간</dt><dd>{selectedSchedule.startTime}</dd></>}
-            {selectedSchedule.orderInDay !== undefined && <><dt>당일 순서</dt><dd>{selectedSchedule.orderInDay}번째 행사</dd></>}
             {selectedSchedule.eventFormat !== 'online' && <><dt>세트리스트 상태</dt><dd>{getSetlistStatusLabel(selectedSchedule.setlistStatus)}</dd></>}
           </dl>
           {selectedSchedule.eventFormat !== 'online' && (
