@@ -6,9 +6,9 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './ArchiveMap.css'
 import { createSchedulePopupContent } from './SchedulePopupContent'
+import LocationlessSchedulePanel from '../schedule/LocationlessSchedulePanel'
 import { locations } from '../../data/locations'
 import { schedules } from '../../data/schedules'
-import { songs } from '../../data/songs'
 import type { CountryCode, Location, Schedule } from '../../types/archive'
 
 setWorkerUrl(workerUrl)
@@ -37,7 +37,6 @@ const videoCallSchedules = schedules
     || (a.orderInDay ?? Infinity) - (b.orderInDay ?? Infinity)
     || (a.startTime ?? '99').localeCompare(b.startTime ?? '99')
     || a.id.localeCompare(b.id))
-const songsById = new Map(songs.map((song) => [song.id, song]))
 const locationPoints: FeatureCollection<Point> = {
   type: 'FeatureCollection',
   features: locations.filter(hasCoordinates).map((location) => ({
@@ -499,79 +498,6 @@ function ArchiveMap() {
         </section>
       )}
     </main>
-  )
-}
-
-
-type LocationlessSchedulePanelProps = {
-  schedules: Schedule[]
-  selected?: Schedule
-  onSelect: (schedule: Schedule) => void
-  onBack: () => void
-  onClose: () => void
-}
-
-function LocationlessSchedulePanel({ schedules: entries, selected, onSelect, onBack, onClose }: LocationlessSchedulePanelProps) {
-  const panelRef = useRef<HTMLElement>(null)
-  useEffect(() => {
-    panelRef.current?.focus()
-  }, [selected?.id])
-
-  return (
-    <aside
-      ref={panelRef}
-      id="locationless-schedules"
-      className="locationless-panel"
-      aria-label="영상통화 일정"
-      tabIndex={-1}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') onClose()
-      }}
-    >
-      <header className="locationless-panel-header">
-        <h2>{selected?.title ?? '영상통화 일정'}</h2>
-        <button type="button" className="locationless-close" aria-label="일정 패널 닫기" onClick={onClose}>×</button>
-      </header>
-      {entries.some((entry) => entry.title.startsWith('[가상]')) && <p className="locationless-demo-notice">가상 테스트 데이터 · 실제 H1-KEY 행사 기록이 아닙니다.</p>}
-      {selected ? (
-        <>
-          <dl className="schedule-details">
-            <dt>날짜</dt><dd>{selected.date.replaceAll('-', '.')}</dd>
-            <dt>형식</dt><dd>{selected.eventFormat === 'online' ? '온라인' : selected.eventFormat === 'hybrid' ? '온라인·오프라인' : selected.eventFormat === 'unknown' ? '형식 미확인' : '오프라인'}</dd>
-            <dt>장소</dt><dd>{selected.eventFormat === 'online' ? '온라인 행사 · 오프라인 장소 없음' : '장소 미확인'}</dd>
-            {selected.startTime !== undefined && <><dt>시작 시간</dt><dd>{selected.startTime}</dd></>}
-            {selected.orderInDay !== undefined && <><dt>당일 순서</dt><dd>같은 날짜 {selected.orderInDay}번째 행사</dd></>}
-          </dl>
-          <h3>세트리스트</h3>
-          {selected.setlistStatus === 'known' || selected.setlistStatus === 'partial' || selected.setlistStatus === 'provisional' ? (
-            <>
-              <p>{selected.setlistStatus === 'known'
-                ? '확인 완료 · 공연 순서'
-                : selected.setlistStatus === 'partial'
-                  ? '부분 확인 · 확인된 곡만 표시'
-                  : '기본 입력 · 실제 세트리스트 확인 필요'}</p>
-            <ol className="schedule-setlist">
-              {selected.setlist.map((songId, index) => <li key={songId + index}>{songsById.get(songId)?.title ?? '곡 정보 오류: 존재하지 않는 songId (' + songId + ')'}</li>)}
-            </ol>
-            </>
-          ) : <p>{selected.setlistStatus === 'unknown' ? '세트리스트 미확인' : '공연 곡 없음'}</p>}
-          {selected.media === undefined && <p className="schedule-media-notice">녹화 영상은 추후 연결 예정입니다.</p>}
-          <button type="button" className="schedule-choice" onClick={onBack}>일정 목록으로 돌아가기</button>
-        </>
-      ) : (
-        <ul>
-          {entries.map((schedule) => (
-            <li key={schedule.id}>
-              <button type="button" className="schedule-choice" onClick={() => onSelect(schedule)}>
-                <time dateTime={schedule.date}>{schedule.date.replaceAll('-', '.')}</time>
-                <strong>{schedule.title}</strong>
-                <span>{[schedule.startTime ?? '시간 미확인', schedule.orderInDay !== undefined ? '같은 날짜 ' + schedule.orderInDay + '번째 행사' : '당일 순서 미확인'].join(' · ')}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </aside>
   )
 }
 

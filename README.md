@@ -56,10 +56,13 @@ npm run preview
 ```text
 src/
 ├─ components/
-│  └─ map/
-│     ├─ ArchiveMap.tsx           # 지도, 마커, 카메라 및 Popup 연결
-│     ├─ ArchiveMap.css           # 지도 관련 스타일
-│     └─ SchedulePopupContent.ts # 스케줄 목록 및 상세 콘텐츠
+│  ├─ map/
+│  │  ├─ ArchiveMap.tsx           # 지도, 마커, 카메라 및 Popup 연결
+│  │  ├─ ArchiveMap.css           # 지도 관련 스타일
+│  │  └─ SchedulePopupContent.ts # 장소 스케줄 Popup 목록 및 상세
+│  └─ schedule/
+│     ├─ LocationlessSchedulePanel.tsx # 장소 없는 일정의 목록 및 상세 UI
+│     └─ LocationlessSchedulePanel.css # 해당 패널 스타일
 ├─ data/
 │  ├─ locations.ts               # 장소 및 좌표
 │  ├─ schedules.ts               # 스케줄 데이터
