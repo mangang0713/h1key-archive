@@ -390,25 +390,57 @@ function ArchiveMap() {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3Z" /></svg>
         <span>처음으로</span>
       </button>
-      {foreignRegions.length > 0 && (
-        <>
-          <button
-            ref={regionNavigationButtonRef}
-            type="button"
-            className="region-navigation-toggle"
-            aria-expanded={regionNavigationOpen}
-            aria-controls="region-navigation-panel"
-            onClick={() => {
-              if (!regionNavigationOpen) {
-                setLocationlessOpen(false)
-                setLocationlessSelected(undefined)
-              }
-              setRegionNavigationOpen((open) => !open)
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>
-            <span>해외 지역</span>
-          </button>
+      {(foreignRegions.length > 0 || videoCallSchedules.length > 0) && (
+        <section className="archive-explorer" aria-label="아카이브 탐색">
+          <h2 className="archive-explorer-title">아카이브 탐색</h2>
+          <div className="archive-explorer-actions">
+            {foreignRegions.length > 0 && (
+              <button
+                ref={regionNavigationButtonRef}
+                type="button"
+                className="archive-explorer-action"
+                aria-expanded={regionNavigationOpen}
+                aria-controls="region-navigation-panel"
+                onClick={() => {
+                  if (!regionNavigationOpen) {
+                    setLocationlessOpen(false)
+                    setLocationlessSelected(undefined)
+                  }
+                  setRegionNavigationOpen((open) => !open)
+                }}
+              >
+                <span className="archive-explorer-icon archive-explorer-icon-region" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>
+                </span>
+                <span className="archive-explorer-label">해외 지역</span>
+                <span className="archive-explorer-count">{foreignRegions.length}개국</span>
+              </button>
+            )}
+            {videoCallSchedules.length > 0 && (
+              <button
+                ref={locationlessButtonRef}
+                type="button"
+                className="archive-explorer-action"
+                aria-label={`영상통화 일정 ${videoCallSchedules.length}건`}
+                aria-expanded={locationlessOpen}
+                aria-controls="locationless-schedules"
+                onClick={() => {
+                  if (!locationlessOpen) {
+                    dismissMapSelectionRef.current?.()
+                    setRegionNavigationOpen(false)
+                  }
+                  setLocationlessSelected(undefined)
+                  setLocationlessOpen((open) => !open)
+                }}
+              >
+                <span className="archive-explorer-icon archive-explorer-icon-video" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="3" /><path d="m15 10 6-3v10l-6-3" /></svg>
+                </span>
+                <span className="archive-explorer-label">영상통화</span>
+                <span className="archive-explorer-count">{videoCallSchedules.length}건</span>
+              </button>
+            )}
+          </div>
           {regionNavigationOpen && (
             <aside
               ref={regionPanelRef}
@@ -451,27 +483,6 @@ function ArchiveMap() {
               </ul>
             </aside>
           )}
-        </>
-      )}
-      {videoCallSchedules.length > 0 && (
-        <>
-          <button
-            ref={locationlessButtonRef}
-            type="button"
-            className="locationless-toggle"
-            aria-expanded={locationlessOpen}
-            aria-controls="locationless-schedules"
-            onClick={() => {
-              if (!locationlessOpen) {
-                dismissMapSelectionRef.current?.()
-                setRegionNavigationOpen(false)
-              }
-              setLocationlessSelected(undefined)
-              setLocationlessOpen((open) => !open)
-            }}
-          >
-            영상통화 {videoCallSchedules.length}
-          </button>
           {locationlessOpen && (
             <LocationlessSchedulePanel
               schedules={videoCallSchedules}
@@ -485,7 +496,7 @@ function ArchiveMap() {
               }}
             />
           )}
-        </>
+        </section>
       )}
     </main>
   )
