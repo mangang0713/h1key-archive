@@ -18,7 +18,9 @@ const INITIAL_CAMERA = { center: [127.8, 36.3] as [number, number], zoom: 6, bea
 const DETAIL_ZOOM = 12
 const CAMERA_DURATION = 450
 type SavedCamera = { center: [number, number]; zoom: number; bearing: number; pitch: number }
-const locationsById = new Map(locations.map((location) => [location.id, location]))
+type MappedLocation = Location & { coordinates: [number, number] }
+const hasCoordinates = (location: Location): location is MappedLocation => location.coordinates !== undefined
+const locationsById = new Map(locations.filter(hasCoordinates).map((location) => [location.id, location]))
 const schedulesByLocation = new Map(
   locations.map((location) => [
     location.id,
@@ -38,7 +40,7 @@ const videoCallSchedules = schedules
 const songsById = new Map(songs.map((song) => [song.id, song]))
 const locationPoints: FeatureCollection<Point> = {
   type: 'FeatureCollection',
-  features: locations.map((location) => ({
+  features: locations.filter(hasCoordinates).map((location) => ({
     type: 'Feature',
     geometry: { type: 'Point', coordinates: location.coordinates },
     properties: { locationId: location.id },
@@ -113,7 +115,7 @@ function ArchiveMap() {
     const homeButton = homeButtonRef.current
     homeButton?.addEventListener('click', goHome)
 
-    const openPopup = (location: Location, selected?: Schedule) => {
+    const openPopup = (location: MappedLocation, selected?: Schedule) => {
       clearPopupEvents()
       popupEvents = new AbortController()
       const signal = popupEvents.signal
@@ -133,7 +135,7 @@ function ArchiveMap() {
       focusTarget.focus()
     }
 
-    const selectLocation = (location: Location) => {
+    const selectLocation = (location: MappedLocation) => {
       setLocationlessOpen(false)
       setLocationlessSelected(undefined)
       cameraRequest++
@@ -254,7 +256,7 @@ function ArchiveMap() {
         type: 'geojson',
         data: locationPoints,
         cluster: true,
-        clusterRadius: 60,
+        clusterRadius: 35,
         clusterMaxZoom: 14,
       })
       // HTML 버튼 마커를 사용하되, 소스 타일은 지도 레이어를 통해 로드합니다.
@@ -362,7 +364,7 @@ function LocationlessSchedulePanel({ schedules: entries, selected, onSelect, onB
         <h2>{selected?.title ?? '영상통화 일정'}</h2>
         <button type="button" className="locationless-close" aria-label="일정 패널 닫기" onClick={onClose}>×</button>
       </header>
-      <p className="locationless-demo-notice">가상 테스트 데이터 · 실제 H1-KEY 행사 기록이 아닙니다.</p>
+      {entries.some((entry) => entry.title.startsWith('[가상]')) && <p className="locationless-demo-notice">가상 테스트 데이터 · 실제 H1-KEY 행사 기록이 아닙니다.</p>}
       {selected ? (
         <>
           <dl className="schedule-details">
@@ -373,10 +375,13 @@ function LocationlessSchedulePanel({ schedules: entries, selected, onSelect, onB
             {selected.orderInDay !== undefined && <><dt>당일 순서</dt><dd>같은 날짜 {selected.orderInDay}번째 행사</dd></>}
           </dl>
           <h3>세트리스트</h3>
-          {selected.setlistStatus === 'known' ? (
+          {selected.setlistStatus === 'known' || selected.setlistStatus === 'provisional' ? (
+            <>
+            <p>{selected.setlistStatus === 'known' ? '확인 완료 · 공연 순서' : '기본 입력 · 실제 세트리스트 확인 필요'}</p>
             <ol className="schedule-setlist">
               {selected.setlist.map((songId, index) => <li key={songId + index}>{songsById.get(songId)?.title ?? '곡 정보 오류: 존재하지 않는 songId (' + songId + ')'}</li>)}
             </ol>
+            </>
           ) : <p>{selected.setlistStatus === 'unknown' ? '세트리스트 미확인' : '공연 곡 없음'}</p>}
           {selected.media === undefined && <p className="schedule-media-notice">녹화 영상은 추후 연결 예정입니다.</p>}
           <button type="button" className="schedule-choice" onClick={onBack}>일정 목록으로 돌아가기</button>

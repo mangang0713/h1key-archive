@@ -1,7 +1,8 @@
 ﻿export type Location = {
   id: string
   name: string
-  coordinates: [number, number] // [경도, 위도]
+  address?: string // 좌표와 장소를 검토·중복 확인할 때 쓰는 실제 주소
+  coordinates?: [number, number] // [경도, 위도]. 좌표 후보가 없으면 주소만 보존하고 지도에서는 제외
 }
 
 export type Song = {
@@ -32,6 +33,7 @@ export type Schedule = {
 } & (
   // 배열 순서는 공연 순서입니다. 곡별 누적 공연 순번은 저장하지 않습니다.
   | { setlistStatus: 'known'; setlist: [Song['id'], ...Song['id'][]] }
+  | { setlistStatus: 'provisional'; setlist: [Song['id'], ...Song['id'][]] } // 기본 입력값이며 실제 공연 내용 확인 전
   | { setlistStatus: 'unknown'; setlist: [] } // 세트리스트 미확인
   | { setlistStatus: 'none'; setlist: [] } // 곡 공연이 없었음을 확인
 )

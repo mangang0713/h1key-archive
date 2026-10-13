@@ -29,9 +29,12 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
   const heading = document.createElement('h2')
   heading.tabIndex = -1
   heading.textContent = selected ? selected.title : `${location.name} · 스케줄 목록`
-  const notice = document.createElement('p')
-  notice.textContent = '더미 테스트 데이터 · 실제 H1-KEY 행사 및 공연 기록이 아닙니다.'
-  content.append(heading, notice)
+  content.append(heading)
+  if (schedules.some((schedule) => schedule.title.startsWith('[가상]'))) {
+    const notice = document.createElement('p')
+    notice.textContent = '더미 테스트 데이터 · 실제 H1-KEY 행사 및 공연 기록이 아닙니다.'
+    content.append(notice)
+  }
   let focusTarget: HTMLElement = heading
 
   if (selected) {
@@ -55,9 +58,11 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     const setlistHeading = document.createElement('h3')
     setlistHeading.textContent = '세트리스트'
     content.append(setlistHeading)
-    if (selected.setlistStatus === 'known') {
+    if (selected.setlistStatus === 'known' || selected.setlistStatus === 'provisional') {
       const status = document.createElement('p')
-      status.textContent = '확인 완료 · 공연 순서'
+      status.textContent = selected.setlistStatus === 'known'
+        ? '확인 완료 · 공연 순서'
+        : '기본 입력 · 실제 세트리스트 확인 필요'
       const setlist = document.createElement('ol')
       setlist.className = 'schedule-setlist'
       selected.setlist.forEach((songId, index) => {
