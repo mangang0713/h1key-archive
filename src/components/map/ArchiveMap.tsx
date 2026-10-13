@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react'
-import { Map as MapLibreMap, Marker, Popup, setWorkerUrl } from 'maplibre-gl'
+import { LngLatBounds, Map as MapLibreMap, Marker, Popup, setWorkerUrl } from 'maplibre-gl'
 import type { GeoJSONSource } from 'maplibre-gl'
 import type { FeatureCollection, Point } from 'geojson'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
@@ -9,7 +9,7 @@ import { createSchedulePopupContent } from './SchedulePopupContent'
 import { locations } from '../../data/locations'
 import { schedules } from '../../data/schedules'
 import { songs } from '../../data/songs'
-import type { Location, Schedule } from '../../types/archive'
+import type { CountryCode, Location, Schedule } from '../../types/archive'
 
 setWorkerUrl(workerUrl)
 
@@ -46,14 +46,37 @@ const locationPoints: FeatureCollection<Point> = {
     properties: { locationId: location.id },
   })),
 }
+const foreignRegionLabels: Array<{ countryCode: Exclude<CountryCode, 'KR'>; label: string }> = [
+  { countryCode: 'CN', label: '중국' },
+  { countryCode: 'JP', label: '일본' },
+  { countryCode: 'TH', label: '태국' },
+]
+const foreignRegions = foreignRegionLabels.map(({ countryCode, label }) => {
+  const regionLocations = locations.filter((location): location is MappedLocation =>
+    (location.countryCode ?? 'KR') === countryCode && hasCoordinates(location)
+      && (schedulesByLocation.get(location.id)?.length ?? 0) > 0)
+  const scheduleCount = regionLocations.reduce(
+    (total, location) => total + (schedulesByLocation.get(location.id)?.length ?? 0),
+    0,
+  )
+  return { countryCode, label, locations: regionLocations, scheduleCount }
+}).filter((region) => region.locations.length > 0)
 
 function ArchiveMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const homeButtonRef = useRef<HTMLButtonElement>(null)
   const locationlessButtonRef = useRef<HTMLButtonElement>(null)
+  const regionNavigationButtonRef = useRef<HTMLButtonElement>(null)
+  const regionPanelRef = useRef<HTMLElement>(null)
   const dismissMapSelectionRef = useRef<(() => void) | undefined>(undefined)
+  const navigateToRegionRef = useRef<((countryCode: CountryCode) => void) | undefined>(undefined)
   const [locationlessOpen, setLocationlessOpen] = useState(false)
   const [locationlessSelected, setLocationlessSelected] = useState<Schedule>()
+  const [regionNavigationOpen, setRegionNavigationOpen] = useState(false)
+
+  useEffect(() => {
+    if (regionNavigationOpen) regionPanelRef.current?.focus()
+  }, [regionNavigationOpen])
 
   useEffect(() => {
     if (!mapContainerRef.current) return
@@ -104,12 +127,78 @@ function ArchiveMap() {
       else closeSelection()
     }
     popup.on('close', closeSelection)
+    const runCameraTransition = (
+      request: number,
+      milliseconds: number,
+      apply: (durationMs: number) => void,
+    ) => new Promise<boolean>((resolve) => {
+      if (disposed || request !== cameraRequest) {
+        resolve(false)
+        return
+      }
+      const durationMs = duration() === 0 ? 0 : milliseconds
+      if (durationMs === 0) {
+        apply(0)
+        resolve(!disposed && request === cameraRequest)
+        return
+      }
+      let completed = false
+      const finish = () => {
+        if (completed) return
+        completed = true
+        map.off('moveend', finish)
+        resolve(!disposed && request === cameraRequest)
+      }
+      map.once('moveend', finish)
+      apply(durationMs)
+      if (!map.isMoving()) finish()
+    })
+    const navigateToRegion = (countryCode: CountryCode) => {
+      const region = foreignRegions.find((candidate) => candidate.countryCode === countryCode)
+      if (!region || region.locations.length === 0) return
+      const bounds = region.locations.reduce(
+        (result, location) => result.extend(location.coordinates),
+        new LngLatBounds(region.locations[0].coordinates, region.locations[0].coordinates),
+      )
+      const request = ++cameraRequest
+      map.stop()
+      discardSelection()
+      setLocationlessOpen(false)
+      setLocationlessSelected(undefined)
+      setRegionNavigationOpen(false)
+      const current = map.getCenter()
+      const overviewZoom = Math.min(map.getZoom(), 3.5)
+      const transition = async () => {
+        const zoomedOut = await runCameraTransition(request, 300, (durationMs) => {
+          const camera = { center: [current.lng, current.lat] as [number, number], zoom: overviewZoom, bearing: 0, pitch: 0 }
+          if (durationMs === 0) map.jumpTo(camera)
+          else map.easeTo({ ...camera, duration: durationMs })
+        })
+        if (!zoomedOut) return
+        const movedAcross = await runCameraTransition(request, 480, (durationMs) => {
+          const camera = { center: bounds.getCenter().toArray() as [number, number], zoom: overviewZoom, bearing: 0, pitch: 0 }
+          if (durationMs === 0) map.jumpTo(camera)
+          else map.easeTo({ ...camera, duration: durationMs })
+        })
+        if (!movedAcross) return
+        await runCameraTransition(request, 500, (durationMs) => {
+          map.fitBounds(bounds, {
+            padding: { top: 88, right: 84, bottom: 88, left: 24 },
+            maxZoom: 8,
+            duration: durationMs,
+          })
+        })
+      }
+      void transition()
+    }
+    navigateToRegionRef.current = navigateToRegion
     const goHome = () => {
       cameraRequest++
       map.stop()
       discardSelection()
       setLocationlessOpen(false)
       setLocationlessSelected(undefined)
+      setRegionNavigationOpen(false)
       map.easeTo({ ...INITIAL_CAMERA, duration: duration() })
     }
     const homeButton = homeButtonRef.current
@@ -138,6 +227,7 @@ function ArchiveMap() {
     const selectLocation = (location: MappedLocation) => {
       setLocationlessOpen(false)
       setLocationlessSelected(undefined)
+      setRegionNavigationOpen(false)
       cameraRequest++
       if (selectedLocationId !== location.id) {
         map.stop()
@@ -283,6 +373,7 @@ function ArchiveMap() {
       popup.off('close', closeSelection)
       clearPopupEvents()
       dismissMapSelectionRef.current = undefined
+      navigateToRegionRef.current = undefined
       map.remove()
     }
   }, [])
@@ -299,6 +390,69 @@ function ArchiveMap() {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3Z" /></svg>
         <span>처음으로</span>
       </button>
+      {foreignRegions.length > 0 && (
+        <>
+          <button
+            ref={regionNavigationButtonRef}
+            type="button"
+            className="region-navigation-toggle"
+            aria-expanded={regionNavigationOpen}
+            aria-controls="region-navigation-panel"
+            onClick={() => {
+              if (!regionNavigationOpen) {
+                setLocationlessOpen(false)
+                setLocationlessSelected(undefined)
+              }
+              setRegionNavigationOpen((open) => !open)
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>
+            <span>해외 지역</span>
+          </button>
+          {regionNavigationOpen && (
+            <aside
+              ref={regionPanelRef}
+              id="region-navigation-panel"
+              className="region-navigation-panel"
+              aria-label="해외 활동 지역 이동"
+              tabIndex={-1}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setRegionNavigationOpen(false)
+                  regionNavigationButtonRef.current?.focus()
+                }
+              }}
+            >
+              <header>
+                <h2>해외 활동 지역</h2>
+                <button
+                  type="button"
+                  className="region-navigation-close"
+                  aria-label="해외 지역 메뉴 닫기"
+                  onClick={() => {
+                    setRegionNavigationOpen(false)
+                    regionNavigationButtonRef.current?.focus()
+                  }}
+                >×</button>
+              </header>
+              <ul>
+                {foreignRegions.map((region) => (
+                  <li key={region.countryCode}>
+                    <button
+                      type="button"
+                      className="region-navigation-choice"
+                      onClick={() => navigateToRegionRef.current?.(region.countryCode)}
+                    >
+                      <strong>{region.label}</strong>
+                      <span>장소 {region.locations.length}곳 · 일정 {region.scheduleCount}건</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          )}
+        </>
+      )}
       {videoCallSchedules.length > 0 && (
         <>
           <button
@@ -308,7 +462,10 @@ function ArchiveMap() {
             aria-expanded={locationlessOpen}
             aria-controls="locationless-schedules"
             onClick={() => {
-              if (!locationlessOpen) dismissMapSelectionRef.current?.()
+              if (!locationlessOpen) {
+                dismissMapSelectionRef.current?.()
+                setRegionNavigationOpen(false)
+              }
               setLocationlessSelected(undefined)
               setLocationlessOpen((open) => !open)
             }}

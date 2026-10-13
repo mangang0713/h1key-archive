@@ -185,6 +185,7 @@ export const locations: Location[] = [
   {
     "id": "venue-021",
     "name": "Shanghai Hongqiao Sands VOCO",
+    "countryCode": "CN",
     "address": "No. 1, Lane 958, Jinshajiang West Road, Jiangqiao Town, Jiading District, Shanghai, China 201803",
     "coordinates": [
       121.329295,
@@ -410,6 +411,7 @@ export const locations: Location[] = [
   {
     "id": "venue-046",
     "name": "크라운 플라자 광저우 화두",
+    "countryCode": "CN",
     "address": "No. 189 Yingbin Avenue, Huadu District, Guangzhou, Guangdong, China",
     "coordinates": [
       113.2169853,
@@ -464,6 +466,7 @@ export const locations: Location[] = [
   {
     "id": "venue-052",
     "name": "닛케이 홀",
+    "countryCode": "JP",
     "address": "東京都千代田区大手町1-3-7 日経ビル3～5階",
     "coordinates": [
       139.76233,

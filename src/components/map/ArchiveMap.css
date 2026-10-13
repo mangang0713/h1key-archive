@@ -155,6 +155,120 @@
   box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
 }
 
+.region-navigation-toggle {
+  position: absolute;
+  z-index: 2;
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+}
+
+.region-navigation-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7px;
+}
+
+.region-navigation-toggle:hover,
+.region-navigation-choice:hover {
+  background: #f5f3ff;
+}
+
+.region-navigation-panel {
+  position: absolute;
+  z-index: 3;
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  width: min(300px, calc(100vw - 24px));
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
+}
+
+.region-navigation-panel:focus-visible,
+.region-navigation-toggle:focus-visible,
+.region-navigation-close:focus-visible,
+.region-navigation-choice:focus-visible {
+  outline: 3px solid #111;
+  outline-offset: 3px;
+}
+
+.region-navigation-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 4px;
+}
+
+.region-navigation-panel h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.region-navigation-close {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #111;
+  font-size: 26px;
+  cursor: pointer;
+}
+
+.region-navigation-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.region-navigation-panel li + li {
+  margin-top: 8px;
+}
+
+.region-navigation-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f8f7fc;
+  color: #111;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.region-navigation-choice span {
+  color: #555;
+  font-size: 12px;
+}
+
 .locationless-toggle:hover,
 .locationless-close:hover {
   background: #f5f3ff;

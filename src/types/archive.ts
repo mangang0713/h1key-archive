@@ -1,9 +1,12 @@
 ﻿export type Location = {
   id: string
   name: string
+  countryCode?: CountryCode // 생략하면 대한민국(KR) 장소로 취급
   address?: string // 좌표와 장소를 검토·중복 확인할 때 쓰는 실제 주소
   coordinates?: [number, number] // [경도, 위도]. 좌표 후보가 없으면 주소만 보존하고 지도에서는 제외
 }
+
+export type CountryCode = 'KR' | 'CN' | 'JP' | 'TH'
 
 export type Song = {
   id: string
