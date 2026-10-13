@@ -7,6 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './ArchiveMap.css'
 import { createSchedulePopupContent } from './SchedulePopupContent'
 import LocationlessSchedulePanel from '../schedule/LocationlessSchedulePanel'
+import ArchiveExplorerPanel from '../archive/ArchiveExplorerPanel'
 import { locations } from '../../data/locations'
 import { schedules } from '../../data/schedules'
 import type { CountryCode, Location, Schedule } from '../../types/archive'
@@ -88,12 +89,14 @@ function ArchiveMap() {
   const homeButtonRef = useRef<HTMLButtonElement>(null)
   const locationlessButtonRef = useRef<HTMLButtonElement>(null)
   const regionNavigationButtonRef = useRef<HTMLButtonElement>(null)
+  const archiveDataButtonRef = useRef<HTMLButtonElement>(null)
   const regionPanelRef = useRef<HTMLElement>(null)
   const dismissMapSelectionRef = useRef<(() => void) | undefined>(undefined)
   const navigateToRegionRef = useRef<((countryCode: CountryCode) => void) | undefined>(undefined)
   const [locationlessOpen, setLocationlessOpen] = useState(false)
   const [locationlessSelected, setLocationlessSelected] = useState<Schedule>()
   const [regionNavigationOpen, setRegionNavigationOpen] = useState(false)
+  const [archiveDataOpen, setArchiveDataOpen] = useState(false)
   const [currentRegionCode, setCurrentRegionCode] = useState<CountryCode>('KR')
   const otherRegions = archiveRegions.filter((region) => region.countryCode !== currentRegionCode)
 
@@ -419,10 +422,13 @@ function ArchiveMap() {
     <main
       className="archive-map"
       onPointerDown={(event) => {
-        if (!locationlessOpen || !(event.target instanceof Element)) return
-        if (event.target.closest('#locationless-schedules, .archive-explorer-actions')) return
-        setLocationlessOpen(false)
-        setLocationlessSelected(undefined)
+        if ((!locationlessOpen && !archiveDataOpen) || !(event.target instanceof Element)) return
+        if (event.target.closest('#locationless-schedules, #archive-data-panel, .archive-explorer-actions')) return
+        if (locationlessOpen) {
+          setLocationlessOpen(false)
+          setLocationlessSelected(undefined)
+        }
+        if (archiveDataOpen) setArchiveDataOpen(false)
       }}
     >
       <div
@@ -435,7 +441,7 @@ function ArchiveMap() {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3Z" /></svg>
         <span>처음으로</span>
       </button>
-      {(otherRegions.length > 0 || videoCallSchedules.length > 0) && (
+      {(otherRegions.length > 0 || videoCallSchedules.length > 0 || schedules.length > 0) && (
         <section className="archive-explorer" aria-label="아카이브 탐색">
           <h2 className="archive-explorer-title">아카이브 탐색</h2>
           <div className="archive-explorer-actions">
@@ -450,6 +456,7 @@ function ArchiveMap() {
                   if (!regionNavigationOpen) {
                     setLocationlessOpen(false)
                     setLocationlessSelected(undefined)
+                    setArchiveDataOpen(false)
                   }
                   setRegionNavigationOpen((open) => !open)
                 }}
@@ -473,6 +480,7 @@ function ArchiveMap() {
                   if (!locationlessOpen) {
                     dismissMapSelectionRef.current?.()
                     setRegionNavigationOpen(false)
+                    setArchiveDataOpen(false)
                   }
                   setLocationlessSelected(undefined)
                   setLocationlessOpen((open) => !open)
@@ -485,6 +493,29 @@ function ArchiveMap() {
                 <span className="archive-explorer-count">{videoCallSchedules.length}건</span>
               </button>
             )}
+            <button
+              ref={archiveDataButtonRef}
+              type="button"
+              className="archive-explorer-action"
+              aria-label={`전체 일정 및 곡 기록 ${schedules.length}건`}
+              aria-expanded={archiveDataOpen}
+              aria-controls="archive-data-panel"
+              onClick={() => {
+                if (!archiveDataOpen) {
+                  dismissMapSelectionRef.current?.()
+                  setLocationlessOpen(false)
+                  setLocationlessSelected(undefined)
+                  setRegionNavigationOpen(false)
+                }
+                setArchiveDataOpen((open) => !open)
+              }}
+            >
+              <span className="archive-explorer-icon archive-explorer-icon-data" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16" /><circle cx="8" cy="5" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="10" cy="19" r="1" /></svg>
+              </span>
+              <span className="archive-explorer-label">전체 기록</span>
+              <span className="archive-explorer-count">{schedules.length}건</span>
+            </button>
           </div>
           {regionNavigationOpen && (
             <aside
@@ -538,6 +569,14 @@ function ArchiveMap() {
                 setLocationlessOpen(false)
                 setLocationlessSelected(undefined)
                 locationlessButtonRef.current?.focus()
+              }}
+            />
+          )}
+          {archiveDataOpen && (
+            <ArchiveExplorerPanel
+              onClose={() => {
+                setArchiveDataOpen(false)
+                archiveDataButtonRef.current?.focus()
               }}
             />
           )}

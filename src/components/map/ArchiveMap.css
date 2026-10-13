@@ -211,6 +211,11 @@
   color: #5eead4;
 }
 
+.archive-explorer-icon-data {
+  background: rgb(96 165 250 / 16%);
+  color: #93c5fd;
+}
+
 .archive-explorer-icon svg {
   width: 18px;
   height: 18px;
