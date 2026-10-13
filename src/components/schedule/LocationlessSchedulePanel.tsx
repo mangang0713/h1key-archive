@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { songs } from '../../data/songs'
 import type { Schedule } from '../../types/archive'
+import { renderXPostEmbeds } from '../media/xPostEmbeds'
+import '../media/XPostEmbeds.css'
 import './LocationlessSchedulePanel.css'
 
 const songsById = new Map(songs.map((song) => [song.id, song]))
@@ -15,10 +17,17 @@ type LocationlessSchedulePanelProps = {
 
 function LocationlessSchedulePanel({ schedules, selected, onSelect, onBack, onClose }: LocationlessSchedulePanelProps) {
   const panelRef = useRef<HTMLElement>(null)
+  const mediaRef = useRef<HTMLDivElement>(null)
+  const selectedXPosts = selected?.media?.xPosts
 
   useEffect(() => {
     panelRef.current?.focus()
   }, [selected?.id])
+
+  useEffect(() => {
+    const xPosts = selectedXPosts
+    if (mediaRef.current && xPosts?.length) renderXPostEmbeds(mediaRef.current, xPosts)
+  }, [selected?.id, selectedXPosts])
 
   return (
     <aside
@@ -67,7 +76,9 @@ function LocationlessSchedulePanel({ schedules, selected, onSelect, onBack, onCl
               ) : <p>{selected.setlistStatus === 'unknown' ? '세트리스트 미확인' : '공연 곡 없음'}</p>}
             </>
           )}
-          {selected.media === undefined && <p className="schedule-media-notice">녹화 영상은 추후 연결 예정입니다.</p>}
+          {selected.media?.xPosts?.length
+            ? <div ref={mediaRef} />
+            : <p className="schedule-media-notice">녹화 영상 게시물이 연결되지 않았습니다.</p>}
           <button type="button" className="schedule-choice" onClick={onBack}>일정 목록으로 돌아가기</button>
         </>
       ) : (

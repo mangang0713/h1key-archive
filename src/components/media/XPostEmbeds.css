@@ -1,0 +1,17 @@
+.x-post-embeds {
+  min-width: 0;
+  margin: 16px 0;
+}
+
+.x-post-embeds h3 {
+  margin: 0 0 8px;
+}
+
+.x-post-embeds blockquote {
+  max-width: 100%;
+  margin: 8px 0;
+}
+
+.x-post-embeds iframe {
+  max-width: 100% !important;
+}

@@ -1,5 +1,7 @@
-﻿import { songs } from '../../data/songs'
+import { songs } from '../../data/songs'
 import type { Location, Schedule } from '../../types/archive'
+import { renderXPostEmbeds } from '../media/xPostEmbeds'
+import '../media/XPostEmbeds.css'
 
 const songsById = new Map(songs.map((song) => [song.id, song]))
 
@@ -82,10 +84,16 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
       content.append(status)
     }
 
-    const mediaNotice = document.createElement('p')
-    mediaNotice.className = 'schedule-media-notice'
-    mediaNotice.textContent = '사진·영상은 추후 연결 예정입니다.'
-    content.append(mediaNotice)
+    if (selected.media?.xPosts?.length) {
+      const embeds = document.createElement('div')
+      content.append(embeds)
+      renderXPostEmbeds(embeds, selected.media.xPosts)
+    } else {
+      const mediaNotice = document.createElement('p')
+      mediaNotice.className = 'schedule-media-notice'
+      mediaNotice.textContent = '사진·영상 게시물이 연결되지 않았습니다.'
+      content.append(mediaNotice)
+    }
     if (schedules.length > 1) {
       const back = document.createElement('button')
       back.type = 'button'

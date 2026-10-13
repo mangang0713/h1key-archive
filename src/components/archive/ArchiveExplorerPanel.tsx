@@ -4,6 +4,8 @@ import { schedules } from '../../data/schedules'
 import { getSongPerformanceStats } from '../../data/songStats'
 import { songs } from '../../data/songs'
 import type { CountryCode, EventFormat, Schedule } from '../../types/archive'
+import { renderXPostEmbeds } from '../media/xPostEmbeds'
+import '../media/XPostEmbeds.css'
 import './ArchiveExplorerPanel.css'
 
 const locationsById = new Map(locations.map((location) => [location.id, location]))
@@ -43,6 +45,7 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
   const panelRef = useRef<HTMLElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const mediaRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<'schedules' | 'songs'>('schedules')
   const [query, setQuery] = useState('')
   const [country, setCountry] = useState<'all' | CountryCode>('all')
@@ -52,11 +55,17 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
   const [selectedSongId, setSelectedSongId] = useState<string>()
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule>()
   const selectedScheduleId = selectedSchedule?.id
+  const selectedScheduleXPosts = selectedSchedule?.media?.xPosts
 
   useEffect(() => {
     if (selectedScheduleId) headingRef.current?.focus()
     else searchRef.current?.focus()
   }, [selectedScheduleId])
+
+  useEffect(() => {
+    const xPosts = selectedScheduleXPosts
+    if (mediaRef.current && xPosts?.length) renderXPostEmbeds(mediaRef.current, xPosts)
+  }, [selectedScheduleId, selectedScheduleXPosts])
 
   const filteredSchedules = useMemo(() => schedules.filter((schedule) => {
     if (fromDate && schedule.date < fromDate) return false
@@ -134,6 +143,7 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
               </>
             ) : <p className="archive-data-note">{selectedSchedule.setlistStatus === 'none' ? '공연 곡 없음' : '세트리스트 미확인'}</p>
           )}
+          {selectedSchedule.media?.xPosts?.length ? <div ref={mediaRef} /> : null}
         </div>
       ) : (
         <>
