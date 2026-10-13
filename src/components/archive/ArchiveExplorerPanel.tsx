@@ -117,22 +117,24 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
             {detailLocation?.address && <><dt>주소</dt><dd>{detailLocation.address}</dd></>}
             {selectedSchedule.startTime && <><dt>시작 시간</dt><dd>{selectedSchedule.startTime}</dd></>}
             {selectedSchedule.orderInDay !== undefined && <><dt>당일 순서</dt><dd>{selectedSchedule.orderInDay}번째 행사</dd></>}
-            <dt>세트리스트 상태</dt><dd>{getSetlistStatusLabel(selectedSchedule.setlistStatus)}</dd>
+            {selectedSchedule.eventFormat !== 'online' && <><dt>세트리스트 상태</dt><dd>{getSetlistStatusLabel(selectedSchedule.setlistStatus)}</dd></>}
           </dl>
-          {selectedSchedule.setlist.length > 0 ? (
-            <>
-              <h3>세트리스트</h3>
-              {selectedSchedule.setlistStatus === 'partial' && <p className="archive-data-note">일부 확인 · 확인된 곡만 표시합니다.</p>}
-              {selectedSchedule.setlistStatus === 'provisional' && <p className="archive-data-note">임시 입력된 목록입니다.</p>}
-              <ol className="archive-data-setlist">
-                {selectedSchedule.setlist.map((songId, index) => (
-                  <li key={`${songId}-${index}`}>
-                    {songsById.get(songId)?.title ?? `곡 정보 오류: ${songId}`}
-                  </li>
-                ))}
-              </ol>
-            </>
-          ) : <p className="archive-data-note">{selectedSchedule.setlistStatus === 'none' ? '공연 곡 없음' : '세트리스트 미확인'}</p>}
+          {selectedSchedule.eventFormat !== 'online' && (
+            selectedSchedule.setlist.length > 0 ? (
+              <>
+                <h3>세트리스트</h3>
+                {selectedSchedule.setlistStatus === 'partial' && <p className="archive-data-note">일부 확인 · 확인된 곡만 표시합니다.</p>}
+                {selectedSchedule.setlistStatus === 'provisional' && <p className="archive-data-note">임시 입력된 목록입니다.</p>}
+                <ol className="archive-data-setlist">
+                  {selectedSchedule.setlist.map((songId, index) => (
+                    <li key={`${songId}-${index}`}>
+                      {songsById.get(songId)?.title ?? `곡 정보 오류: ${songId}`}
+                    </li>
+                  ))}
+                </ol>
+              </>
+            ) : <p className="archive-data-note">{selectedSchedule.setlistStatus === 'none' ? '공연 곡 없음' : '세트리스트 미확인'}</p>
+          )}
         </div>
       ) : (
         <>

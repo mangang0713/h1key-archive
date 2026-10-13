@@ -47,37 +47,48 @@ function LocationlessSchedulePanel({ schedules, selected, onSelect, onBack, onCl
             {selected.startTime !== undefined && <><dt>시작 시간</dt><dd>{selected.startTime}</dd></>}
             {selected.orderInDay !== undefined && <><dt>당일 순서</dt><dd>같은 날짜 {selected.orderInDay}번째 행사</dd></>}
           </dl>
-          <h3>세트리스트</h3>
-          {selected.setlistStatus === 'known' || selected.setlistStatus === 'partial' || selected.setlistStatus === 'provisional' ? (
+          {selected.eventFormat !== 'online' && (
             <>
-              <p>{selected.setlistStatus === 'known'
-                ? '확인 완료 · 공연 순서'
-                : selected.setlistStatus === 'partial'
-                  ? '부분 확인 · 확인된 곡만 표시'
-                  : '기본 입력 · 실제 세트리스트 확인 필요'}</p>
-              <ol className="schedule-setlist">
-                {selected.setlist.map((songId, index) => (
-                  <li key={`${songId}-${index}`}>
-                    {songsById.get(songId)?.title ?? `곡 정보 오류: 존재하지 않는 songId (${songId})`}
-                  </li>
-                ))}
-              </ol>
+              <h3>세트리스트</h3>
+              {selected.setlistStatus === 'known' || selected.setlistStatus === 'partial' || selected.setlistStatus === 'provisional' ? (
+                <>
+                  <p>{selected.setlistStatus === 'known'
+                    ? '확인 완료 · 공연 순서'
+                    : selected.setlistStatus === 'partial'
+                      ? '부분 확인 · 확인된 곡만 표시'
+                      : '기본 입력 · 실제 세트리스트 확인 필요'}</p>
+                  <ol className="schedule-setlist">
+                    {selected.setlist.map((songId, index) => (
+                      <li key={`${songId}-${index}`}>
+                        {songsById.get(songId)?.title ?? `곡 정보 오류: 존재하지 않는 songId (${songId})`}
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              ) : <p>{selected.setlistStatus === 'unknown' ? '세트리스트 미확인' : '공연 곡 없음'}</p>}
             </>
-          ) : <p>{selected.setlistStatus === 'unknown' ? '세트리스트 미확인' : '공연 곡 없음'}</p>}
+          )}
           {selected.media === undefined && <p className="schedule-media-notice">녹화 영상은 추후 연결 예정입니다.</p>}
           <button type="button" className="schedule-choice" onClick={onBack}>일정 목록으로 돌아가기</button>
         </>
       ) : (
         <ul>
-          {schedules.map((schedule) => (
-            <li key={schedule.id}>
-              <button type="button" className="schedule-choice" onClick={() => onSelect(schedule)}>
-                <time dateTime={schedule.date}>{schedule.date.replaceAll('-', '.')}</time>
-                <strong>{schedule.title}</strong>
-                <span>{[schedule.startTime ?? '시간 미확인', schedule.orderInDay !== undefined ? '같은 날짜 ' + schedule.orderInDay + '번째 행사' : '당일 순서 미확인'].join(' · ')}</span>
-              </button>
-            </li>
-          ))}
+          {schedules.map((schedule) => {
+            const details = [
+              schedule.startTime,
+              schedule.orderInDay !== undefined ? `같은 날짜 ${schedule.orderInDay}번째 행사` : undefined,
+            ].filter((detail): detail is string => detail !== undefined)
+
+            return (
+              <li key={schedule.id}>
+                <button type="button" className="schedule-choice" onClick={() => onSelect(schedule)}>
+                  <time dateTime={schedule.date}>{schedule.date.replaceAll('-', '.')}</time>
+                  <strong>{schedule.title}</strong>
+                  {details.length > 0 && <span>{details.join(' · ')}</span>}
+                </button>
+              </li>
+            )
+          })}
         </ul>
       )}
     </aside>
