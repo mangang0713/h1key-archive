@@ -543,9 +543,13 @@ function LocationlessSchedulePanel({ schedules: entries, selected, onSelect, onB
             {selected.orderInDay !== undefined && <><dt>당일 순서</dt><dd>같은 날짜 {selected.orderInDay}번째 행사</dd></>}
           </dl>
           <h3>세트리스트</h3>
-          {selected.setlistStatus === 'known' || selected.setlistStatus === 'provisional' ? (
+          {selected.setlistStatus === 'known' || selected.setlistStatus === 'partial' || selected.setlistStatus === 'provisional' ? (
             <>
-            <p>{selected.setlistStatus === 'known' ? '확인 완료 · 공연 순서' : '기본 입력 · 실제 세트리스트 확인 필요'}</p>
+              <p>{selected.setlistStatus === 'known'
+                ? '확인 완료 · 공연 순서'
+                : selected.setlistStatus === 'partial'
+                  ? '부분 확인 · 확인된 곡만 표시'
+                  : '기본 입력 · 실제 세트리스트 확인 필요'}</p>
             <ol className="schedule-setlist">
               {selected.setlist.map((songId, index) => <li key={songId + index}>{songsById.get(songId)?.title ?? '곡 정보 오류: 존재하지 않는 songId (' + songId + ')'}</li>)}
             </ol>
