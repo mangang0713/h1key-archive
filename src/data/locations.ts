@@ -43,8 +43,8 @@ export const locations: Location[] = [
     "name": "KBS 신관 공개홀",
     "address": "서울특별시 영등포구 여의공원로 13",
     "coordinates": [
-      126.9167263,
-      37.5252286
+      126.9157,
+      37.52626
     ]
   },
   {
