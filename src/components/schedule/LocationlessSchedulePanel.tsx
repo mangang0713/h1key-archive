@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { songs } from '../../data/songs'
 import type { Schedule } from '../../types/archive'
+import { renderPhotoGallery } from '../media/photoGallery'
 import { renderXPostEmbeds } from '../media/xPostEmbeds'
 import '../media/XPostEmbeds.css'
 import './LocationlessSchedulePanel.css'
@@ -18,7 +19,9 @@ type LocationlessSchedulePanelProps = {
 function LocationlessSchedulePanel({ schedules, selected, onSelect, onBack, onClose }: LocationlessSchedulePanelProps) {
   const panelRef = useRef<HTMLElement>(null)
   const mediaRef = useRef<HTMLDivElement>(null)
+  const photoRef = useRef<HTMLDivElement>(null)
   const selectedXPosts = selected?.media?.xPosts
+  const selectedPhotos = selected?.media?.photos
 
   useEffect(() => {
     panelRef.current?.focus()
@@ -26,8 +29,14 @@ function LocationlessSchedulePanel({ schedules, selected, onSelect, onBack, onCl
 
   useEffect(() => {
     const xPosts = selectedXPosts
-    if (mediaRef.current && xPosts?.length) renderXPostEmbeds(mediaRef.current, xPosts)
+    if (mediaRef.current && xPosts?.length) return renderXPostEmbeds(mediaRef.current, xPosts)
   }, [selected?.id, selectedXPosts])
+
+  useEffect(() => {
+    if (photoRef.current && selectedPhotos?.length) {
+      return renderPhotoGallery(photoRef.current, selectedPhotos)
+    }
+  }, [selected?.id, selectedPhotos])
 
   return (
     <aside
@@ -76,9 +85,10 @@ function LocationlessSchedulePanel({ schedules, selected, onSelect, onBack, onCl
               ) : <p>{selected.setlistStatus === 'unknown' ? '세트리스트 미확인' : '공연 곡 없음'}</p>}
             </>
           )}
+          {selected.media?.photos?.length && <div ref={photoRef} />}
           {selected.media?.xPosts?.length
             ? <div ref={mediaRef} />
-            : <p className="schedule-media-notice">녹화 영상 게시물이 연결되지 않았습니다.</p>}
+            : !selected.media?.photos?.length && <p className="schedule-media-notice">녹화 영상 게시물이 연결되지 않았습니다.</p>}
           <button type="button" className="schedule-choice" onClick={onBack}>일정 목록으로 돌아가기</button>
         </>
       ) : (

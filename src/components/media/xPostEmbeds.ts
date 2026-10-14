@@ -47,9 +47,13 @@ function loadXWidgets(container: HTMLElement) {
 }
 
 // X 원본 게시물 링크를 안전한 DOM 노드로 만들고 공식 위젯이 iframe으로 바꾸도록 요청합니다.
-export function renderXPostEmbeds(container: HTMLElement, urls: string[]) {
+export function renderXPostEmbeds(
+  container: HTMLElement,
+  urls: string[],
+  parentSignal?: AbortSignal,
+) {
   const posts = urls.filter(isXPostUrl)
-  if (posts.length === 0) return
+  if (posts.length === 0) return () => {}
 
   const section = document.createElement('section')
   section.className = 'x-post-embeds'
@@ -69,4 +73,12 @@ export function renderXPostEmbeds(container: HTMLElement, urls: string[]) {
 
   container.replaceChildren(section)
   loadXWidgets(section)
+
+  const dispose = () => {
+    section.remove()
+    parentSignal?.removeEventListener('abort', dispose)
+  }
+  if (parentSignal?.aborted) dispose()
+  else parentSignal?.addEventListener('abort', dispose, { once: true })
+  return dispose
 }

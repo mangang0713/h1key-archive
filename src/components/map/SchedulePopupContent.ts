@@ -1,5 +1,6 @@
 import { songs } from '../../data/songs'
 import type { Location, Schedule } from '../../types/archive'
+import { renderPhotoGallery } from '../media/photoGallery'
 import { renderXPostEmbeds } from '../media/xPostEmbeds'
 import '../media/XPostEmbeds.css'
 
@@ -84,11 +85,12 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
       content.append(status)
     }
 
+    if (selected.media?.photos?.length) renderPhotoGallery(content, selected.media.photos)
     if (selected.media?.xPosts?.length) {
       const embeds = document.createElement('div')
       content.append(embeds)
-      renderXPostEmbeds(embeds, selected.media.xPosts)
-    } else {
+      renderXPostEmbeds(embeds, selected.media.xPosts, signal)
+    } else if (!selected.media?.photos?.length) {
       const mediaNotice = document.createElement('p')
       mediaNotice.className = 'schedule-media-notice'
       mediaNotice.textContent = '사진·영상 게시물이 연결되지 않았습니다.'

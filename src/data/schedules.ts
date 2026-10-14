@@ -1544,14 +1544,36 @@ const xPostIdsByDate: Record<string, string[]> = {
 }
 
 const attachedXPostDates = new Set<string>()
+// 게시물 본문 날짜가 확인된 X 사진 원본입니다. 같은 날짜 일정은 기존 정책대로 첫 일정에 연결합니다.
+const photosByDate: Record<string, string[]> = {
+  '2026-04-10': [
+    'https://pbs.twimg.com/media/HFh-cZJbkAATsM8?format=jpg&name=large',
+    'https://pbs.twimg.com/media/HFh-caCakAAFcSx?format=jpg&name=large',
+    'https://pbs.twimg.com/media/HFh-cahakAMPnAo?format=jpg&name=large',
+    'https://pbs.twimg.com/media/HFh-cbaakAIYvFc?format=jpg&name=large',
+    'https://pbs.twimg.com/media/HFh-WPgakAAq8Qg?format=jpg&name=large',
+    'https://pbs.twimg.com/media/HFh-WRFa0AARUPX?format=jpg&name=large',
+    'https://pbs.twimg.com/media/HFh-WR6akAI85IZ?format=jpg&name=large',
+  ],
+}
+// 위 사진 미리보기에 이미 표시하는 게시물은 X 임베드에서 중복하지 않습니다.
+const photoPostIdsByDate: Record<string, string[]> = {
+  '2026-04-10': ['2042521470493167737', '2042521359931314450'],
+}
 for (const schedule of schedules) {
   const ids = xPostIdsByDate[schedule.date]
-  if (!ids || attachedXPostDates.has(schedule.date)) continue
-  schedule.media = {
-    ...schedule.media,
-    xPosts: ids.map((id) => `https://x.com/hessxl_/status/${id}`),
+  const photos = photosByDate[schedule.date]
+  const photoPostIds = new Set(photoPostIdsByDate[schedule.date] ?? [])
+  const remainingPostIds = ids?.filter((id) => !photoPostIds.has(id))
+  if (attachedXPostDates.has(schedule.date)) continue
+  if (remainingPostIds?.length || photos?.length) {
+    schedule.media = {
+      ...schedule.media,
+      ...(remainingPostIds?.length ? { xPosts: remainingPostIds.map((id) => `https://x.com/hessxl_/status/${id}`) } : {}),
+      ...(photos?.length ? { photos } : {}),
+    }
+    attachedXPostDates.add(schedule.date)
   }
-  attachedXPostDates.add(schedule.date)
 }
 // 새 데이터를 추가할 때 잘못된 ID 연결과 같은 날짜의 순서 중복을 발견합니다.
 for (const [name, entries] of [

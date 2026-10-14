@@ -4,6 +4,7 @@ import { schedules } from '../../data/schedules'
 import { getSongPerformanceStats } from '../../data/songStats'
 import { songs } from '../../data/songs'
 import type { CountryCode, EventFormat, Schedule } from '../../types/archive'
+import { renderPhotoGallery } from '../media/photoGallery'
 import { renderXPostEmbeds } from '../media/xPostEmbeds'
 import '../media/XPostEmbeds.css'
 import './ArchiveExplorerPanel.css'
@@ -46,6 +47,7 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
   const searchRef = useRef<HTMLInputElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const mediaRef = useRef<HTMLDivElement>(null)
+  const photoRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<'schedules' | 'songs'>('schedules')
   const [query, setQuery] = useState('')
   const [country, setCountry] = useState<'all' | CountryCode>('all')
@@ -56,6 +58,7 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule>()
   const selectedScheduleId = selectedSchedule?.id
   const selectedScheduleXPosts = selectedSchedule?.media?.xPosts
+  const selectedSchedulePhotos = selectedSchedule?.media?.photos
 
   useEffect(() => {
     if (selectedScheduleId) headingRef.current?.focus()
@@ -64,8 +67,14 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
 
   useEffect(() => {
     const xPosts = selectedScheduleXPosts
-    if (mediaRef.current && xPosts?.length) renderXPostEmbeds(mediaRef.current, xPosts)
+    if (mediaRef.current && xPosts?.length) return renderXPostEmbeds(mediaRef.current, xPosts)
   }, [selectedScheduleId, selectedScheduleXPosts])
+
+  useEffect(() => {
+    if (photoRef.current && selectedSchedulePhotos?.length) {
+      return renderPhotoGallery(photoRef.current, selectedSchedulePhotos)
+    }
+  }, [selectedScheduleId, selectedSchedulePhotos])
 
   const filteredSchedules = useMemo(() => schedules.filter((schedule) => {
     if (fromDate && schedule.date < fromDate) return false
@@ -143,6 +152,7 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
               </>
             ) : <p className="archive-data-note">{selectedSchedule.setlistStatus === 'none' ? '공연 곡 없음' : '세트리스트 미확인'}</p>
           )}
+          {selectedSchedule.media?.photos?.length ? <div ref={photoRef} /> : null}
           {selectedSchedule.media?.xPosts?.length ? <div ref={mediaRef} /> : null}
         </div>
       ) : (
