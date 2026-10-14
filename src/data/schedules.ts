@@ -1476,7 +1476,7 @@ export const schedules: Schedule[] = [
 ]
 
 // X 게시물 본문에 적힌 날짜 코드(YYMMDD)와 일치하는 링크입니다.
-// 같은 날짜에 일정이 여러 개면 우선 첫 일정에 모아 사용자가 행사별 연결을 검토할 수 있게 합니다.
+// 같은 날짜에 여러 일정이 있으면 아래 일정별 분류를 우선 적용합니다.
 const xPostIdsByDate: Record<string, string[]> = {
   '2026-10-11': ['2109412264730333248', '2109410649315152263', '2109410426585051481', '2109313336475324542', '2109310755539689776'],
   '2026-10-10': ['2108885429089186018', '2108884154620538897', '2108882962146291792', '2108881548984623137', '2108861094332899388', '2108861082999669053'],
@@ -1543,37 +1543,68 @@ const xPostIdsByDate: Record<string, string[]> = {
   '2026-03-08': ['2030632525794857176', '2030632441124475367'],
 }
 
-const attachedXPostDates = new Set<string>()
-// 게시물 본문 날짜가 확인된 X 사진 원본입니다. 같은 날짜 일정은 기존 정책대로 첫 일정에 연결합니다.
-const photosByDate: Record<string, string[]> = {
-  '2026-04-10': [
-    'https://pbs.twimg.com/media/HFh-cZJbkAATsM8?format=jpg&name=large',
-    'https://pbs.twimg.com/media/HFh-caCakAAFcSx?format=jpg&name=large',
-    'https://pbs.twimg.com/media/HFh-cahakAMPnAo?format=jpg&name=large',
-    'https://pbs.twimg.com/media/HFh-cbaakAIYvFc?format=jpg&name=large',
-    'https://pbs.twimg.com/media/HFh-WPgakAAq8Qg?format=jpg&name=large',
-    'https://pbs.twimg.com/media/HFh-WRFa0AARUPX?format=jpg&name=large',
-    'https://pbs.twimg.com/media/HFh-WR6akAI85IZ?format=jpg&name=large',
-  ],
+// 사용자가 확인한 동일 날짜 게시물의 행사별 연결입니다.
+const xPostIdsByScheduleId: Record<string, string[]> = {
+  'schedule-2026-03-08-02': ['2030632525794857176', '2030632441124475367'],
+  'schedule-2026-03-11-02': ['2031757625504002085'],
+  'schedule-2026-03-13-02': ['2032517629072793843'],
+  'schedule-2026-03-15-02': ['2033154605237043662'],
+  'schedule-2026-03-22-02': ['2035704544550879331', '2035704544383107262', '2035704443082293409'],
+  'schedule-2026-03-29-02': ['2038294561370603648', '2038262107616284864', '2038261885381009894', '2038260913015583089'],
+  'schedule-2026-04-10-02': ['2042521470493167737', '2042521359931314450'],
+  'schedule-2026-04-25-02': ['2048086912301457869', '2048086765676929225', '2048083838220603879', '2048082770484949287', '2048081552639512956'],
+  'schedule-2026-05-12-01': ['2054214508428841442'],
+  'schedule-2026-05-12-02': ['2054233298424230205', '2054216428291871053'],
+  'schedule-2026-05-13-01': ['2054546188205269262'],
+  'schedule-2026-05-13-02': ['2054823758008029535', '2054546147243692243', '2054546077135912963'],
+  'schedule-2026-05-27-01': ['2059662478557286908'],
+  'schedule-2026-05-27-02': ['2059662461037613477'],
 }
-// 위 사진 미리보기에 이미 표시하는 게시물은 X 임베드에서 중복하지 않습니다.
-const photoPostIdsByDate: Record<string, string[]> = {
-  '2026-04-10': ['2042521470493167737', '2042521359931314450'],
+const classifiedMultiScheduleDates = new Set([
+  '2026-03-08', '2026-03-11', '2026-03-13', '2026-03-15', '2026-03-22',
+  '2026-03-27', '2026-03-29', '2026-04-10', '2026-04-25', '2026-05-12',
+  '2026-05-13', '2026-05-27',
+])
+
+const attachedXPostDates = new Set<string>()
+type PhotoPostGroup = { urls: string[]; sourcePostIds: string[] }
+// 사진 미리보기와 그 사진을 제공하는 원본 게시물을 한곳에 함께 기록합니다.
+// 사진 URL을 추가할 때 sourcePostIds에도 원본 게시물 ID를 넣으면 임베드에서 자동 제외됩니다.
+const photoPostsByScheduleId: Record<string, PhotoPostGroup> = {
+  'schedule-2026-04-10-02': {
+    urls: [
+      'https://pbs.twimg.com/media/HFh-cZJbkAATsM8?format=jpg&name=large',
+      'https://pbs.twimg.com/media/HFh-caCakAAFcSx?format=jpg&name=large',
+      'https://pbs.twimg.com/media/HFh-cahakAMPnAo?format=jpg&name=large',
+      'https://pbs.twimg.com/media/HFh-cbaakAIYvFc?format=jpg&name=large',
+      'https://pbs.twimg.com/media/HFh-WPgakAAq8Qg?format=jpg&name=large',
+      'https://pbs.twimg.com/media/HFh-WRFa0AARUPX?format=jpg&name=large',
+      'https://pbs.twimg.com/media/HFh-WR6akAI85IZ?format=jpg&name=large',
+    ],
+    sourcePostIds: ['2042521470493167737', '2042521359931314450'],
+  },
 }
 for (const schedule of schedules) {
-  const ids = xPostIdsByDate[schedule.date]
-  const photos = photosByDate[schedule.date]
-  const photoPostIds = new Set(photoPostIdsByDate[schedule.date] ?? [])
-  const remainingPostIds = ids?.filter((id) => !photoPostIds.has(id))
-  if (attachedXPostDates.has(schedule.date)) continue
-  if (remainingPostIds?.length || photos?.length) {
+  const isClassifiedDate = classifiedMultiScheduleDates.has(schedule.date)
+  const ids = xPostIdsByScheduleId[schedule.id] ?? (
+    isClassifiedDate || attachedXPostDates.has(schedule.date)
+      ? []
+      : xPostIdsByDate[schedule.date] ?? []
+  )
+  const photoGroup = photoPostsByScheduleId[schedule.id]
+  const photoPostIds = new Set(photoGroup?.sourcePostIds ?? [])
+  const remainingPostIds = ids.filter((id) => !photoPostIds.has(id))
+  if (photoGroup && photoGroup.sourcePostIds.some((id) => !ids.includes(id))) {
+    throw new Error(schedule.id + ': 사진 원본 게시물이 해당 일정 게시물 목록에 없습니다.')
+  }
+  if (remainingPostIds.length || photoGroup?.urls.length) {
     schedule.media = {
       ...schedule.media,
-      ...(remainingPostIds?.length ? { xPosts: remainingPostIds.map((id) => `https://x.com/hessxl_/status/${id}`) } : {}),
-      ...(photos?.length ? { photos } : {}),
+      ...(remainingPostIds.length ? { xPosts: remainingPostIds.map((id) => `https://x.com/hessxl_/status/${id}`) } : {}),
+      ...(photoGroup?.urls.length ? { photos: photoGroup.urls } : {}),
     }
-    attachedXPostDates.add(schedule.date)
   }
+  if (!isClassifiedDate) attachedXPostDates.add(schedule.date)
 }
 // 새 데이터를 추가할 때 잘못된 ID 연결과 같은 날짜의 순서 중복을 발견합니다.
 for (const [name, entries] of [
