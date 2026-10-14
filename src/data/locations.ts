@@ -58,11 +58,11 @@ export const locations: Location[] = [
   },
   {
     "id": "venue-007",
-    "name": "SBS 프리즘타워",
-    "address": "서울특별시 마포구 상암산로 82",
+    "name": "SBS 등촌동 공개홀",
+    "address": "서울특별시 강서구 양천로 442",
     "coordinates": [
-      126.881675,
-      37.5811556
+      126.85021,
+      37.56319
     ]
   },
   {
@@ -323,8 +323,8 @@ export const locations: Location[] = [
     "name": "여의도 KBS홀",
     "address": "서울특별시 영등포구 여의공원로 13",
     "coordinates": [
-      126.9167263,
-      37.5252286
+      126.91529,
+      37.52595
     ]
   },
   {
