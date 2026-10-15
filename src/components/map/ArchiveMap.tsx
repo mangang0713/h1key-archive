@@ -25,7 +25,32 @@ const sourceId = 'archive-locations'
 const INITIAL_CAMERA = { center: [127.8, 36.3] as [number, number], zoom: 6, bearing: 0, pitch: 0 }
 const DETAIL_ZOOM = 12
 const CAMERA_DURATION = 450
+const JOURNEY_CAMERA_DURATION = 1500
+const JOURNEY_STOP_DELAY = 1800
+const JOURNEY_MIN_ZOOM = 7.5
+const JOURNEY_MAX_ZOOM = 13
+const JOURNEY_START_DATE = '2026-02-21'
 type SavedCamera = { center: [number, number]; zoom: number; bearing: number; pitch: number }
+
+const todayInKorea = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+}).format(new Date())
+
+const timeTravelSchedules = schedules
+  .filter((schedule) => schedule.date >= JOURNEY_START_DATE && schedule.date <= todayInKorea)
+  .sort((a, b) => a.date.localeCompare(b.date)
+    || (a.orderInDay ?? Infinity) - (b.orderInDay ?? Infinity)
+    || (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99')
+    || a.id.localeCompare(b.id))
+type TimeTravelController = {
+  start: () => void
+  stop: (restoreCamera: boolean) => void
+  pauseMovement: () => void
+  focus: (schedule: Schedule) => void
+}
 
 function ArchiveMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -33,19 +58,47 @@ function ArchiveMap() {
   const locationlessButtonRef = useRef<HTMLButtonElement>(null)
   const regionNavigationButtonRef = useRef<HTMLButtonElement>(null)
   const archiveDataButtonRef = useRef<HTMLButtonElement>(null)
+  const timeTravelButtonRef = useRef<HTMLButtonElement>(null)
+  const timeTravelPanelRef = useRef<HTMLElement>(null)
   const regionPanelRef = useRef<HTMLElement>(null)
   const dismissMapSelectionRef = useRef<(() => void) | undefined>(undefined)
   const navigateToRegionRef = useRef<((countryCode: CountryCode) => void) | undefined>(undefined)
+  const timeTravelControllerRef = useRef<TimeTravelController | undefined>(undefined)
   const [locationlessOpen, setLocationlessOpen] = useState(false)
   const [locationlessSelected, setLocationlessSelected] = useState<Schedule>()
   const [regionNavigationOpen, setRegionNavigationOpen] = useState(false)
   const [archiveDataOpen, setArchiveDataOpen] = useState(false)
+  const [timeTravelOpen, setTimeTravelOpen] = useState(false)
+  const [timeTravelPlaying, setTimeTravelPlaying] = useState(false)
+  const [timeTravelMoving, setTimeTravelMoving] = useState(false)
+  const [timeTravelPausedOnRoute, setTimeTravelPausedOnRoute] = useState(false)
+  const [timeTravelIndex, setTimeTravelIndex] = useState<number | null>(null)
+  const currentTimeTravelIndex = timeTravelIndex ?? 0
   const [currentRegionCode, setCurrentRegionCode] = useState<CountryCode>('KR')
   const otherRegions = archiveRegions.filter((region) => region.countryCode !== currentRegionCode)
+  const activeTimeTravelSchedule = timeTravelIndex === null ? undefined : timeTravelSchedules[timeTravelIndex]
+
+  useEffect(() => {
+    if (!timeTravelOpen || !activeTimeTravelSchedule) return
+    timeTravelControllerRef.current?.focus(activeTimeTravelSchedule)
+  }, [activeTimeTravelSchedule, timeTravelOpen])
+
+  useEffect(() => {
+    if (!timeTravelOpen || !timeTravelPlaying || timeTravelMoving || timeTravelPausedOnRoute || timeTravelIndex === null) return
+    const timer = window.setTimeout(() => {
+      if (timeTravelIndex >= timeTravelSchedules.length - 1) setTimeTravelPlaying(false)
+      else setTimeTravelIndex(timeTravelIndex + 1)
+    }, JOURNEY_STOP_DELAY)
+    return () => window.clearTimeout(timer)
+  }, [timeTravelIndex, timeTravelMoving, timeTravelOpen, timeTravelPausedOnRoute, timeTravelPlaying])
 
   useEffect(() => {
     if (regionNavigationOpen) regionPanelRef.current?.focus()
   }, [regionNavigationOpen])
+
+  useEffect(() => {
+    if (timeTravelOpen) timeTravelPanelRef.current?.focus()
+  }, [timeTravelOpen])
 
   useEffect(() => {
     if (!mapContainerRef.current) return
@@ -64,10 +117,22 @@ function ArchiveMap() {
     map.touchZoomRotate.disableRotation()
 
     let disposed = false
-    const popup = new Popup({ maxWidth: 'min(300px, calc(100vw - 24px))', offset: 48, anchor: 'bottom' })
+    const popup = new Popup({
+      className: 'archive-schedule-popup',
+      maxWidth: 'min(380px, calc(100vw - 24px))',
+      offset: 48,
+      anchor: 'bottom',
+    })
     let savedCamera: SavedCamera | undefined
     let selectedLocationId: string | undefined
     let selectedLocationCenter: [number, number] | undefined
+    let timeTravelCamera: SavedCamera | undefined
+    let activeTimeTravelLocationId: string | undefined
+    const visibleMarkers = new Map<string, { marker: Marker; remove: () => void }>()
+    let journeyLocationMarker: Marker | undefined
+    let lastJourneyCoordinates: [number, number] | undefined
+    let journeyAnimationFrame: number | undefined
+    const visitedScheduleMarkers = new Map<string, Marker>()
     let cameraRequest = 0
     const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : CAMERA_DURATION
     const discardSelection = () => {
@@ -76,6 +141,212 @@ function ArchiveMap() {
       selectedLocationId = undefined
       selectedLocationCenter = undefined
       popup.remove()
+    }
+    const highlightTimeTravelLocation = (locationId?: string) => {
+      activeTimeTravelLocationId = locationId
+      for (const [key, entry] of visibleMarkers) {
+        entry.marker.getElement().classList.toggle('journey-active-marker', key === `location:${locationId}`)
+      }
+    }
+    const clearVisibleLocationMarkers = () => {
+      visibleMarkers.forEach((entry) => entry.remove())
+      visibleMarkers.clear()
+    }
+    const clearJourneyMarkers = () => {
+      visitedScheduleMarkers.forEach((marker) => marker.remove())
+      visitedScheduleMarkers.clear()
+    }
+    const revealScheduleMarker = (schedule: Schedule, coordinates: [number, number]) => {
+      if (disposed || !timeTravelCamera || visitedScheduleMarkers.has(schedule.id)) return
+      const eventMarker = document.createElement('div')
+      eventMarker.className = 'journey-visited-marker'
+      eventMarker.setAttribute('aria-hidden', 'true')
+      eventMarker.title = `${schedule.date} ${schedule.title}`
+      const markerLabel = document.createElement('span')
+      markerLabel.textContent = String(visitedScheduleMarkers.size + 1)
+      eventMarker.append(markerLabel)
+      const marker = new Marker({ element: eventMarker, anchor: 'bottom' })
+        .setLngLat(coordinates)
+        .addTo(map)
+      visitedScheduleMarkers.set(schedule.id, marker)
+    }
+    const pauseTimeTravelMovement = () => {
+      cameraRequest++
+      map.stop()
+      if (journeyAnimationFrame !== undefined) {
+        window.cancelAnimationFrame(journeyAnimationFrame)
+        journeyAnimationFrame = undefined
+      }
+      setTimeTravelMoving(false)
+    }
+    const zoomForJourneyDistance = (from: [number, number], to: [number, number]) => {
+      const radians = Math.PI / 180
+      const [fromLongitude, fromLatitude] = from.map((coordinate) => coordinate * radians)
+      const [toLongitude, toLatitude] = to.map((coordinate) => coordinate * radians)
+      const latitudeDelta = toLatitude - fromLatitude
+      const longitudeDelta = toLongitude - fromLongitude
+      const haversine = Math.min(1, Math.sin(latitudeDelta / 2) ** 2
+        + Math.cos(fromLatitude) * Math.cos(toLatitude) * Math.sin(longitudeDelta / 2) ** 2
+      )
+      const distanceMeters = 6_371_000 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))
+      if (distanceMeters < 30) return map.getZoom()
+      const averageLatitude = (fromLatitude + toLatitude) / 2
+      const worldPixelsPerZoomZero = 78_271.51696 * Math.cos(averageLatitude)
+      const targetZoom = Math.log2(
+        (map.getContainer().clientWidth * worldPixelsPerZoomZero) / (distanceMeters * 0.68),
+      )
+      return Math.max(JOURNEY_MIN_ZOOM, Math.min(JOURNEY_MAX_ZOOM, targetZoom))
+    }
+    const stopTimeTravel = (restoreCamera: boolean) => {
+      const previous = timeTravelCamera
+      timeTravelCamera = undefined
+      if (previous) {
+        cameraRequest++
+        map.stop()
+      }
+      if (journeyAnimationFrame !== undefined) {
+        window.cancelAnimationFrame(journeyAnimationFrame)
+        journeyAnimationFrame = undefined
+      }
+      highlightTimeTravelLocation(undefined)
+      journeyLocationMarker?.remove()
+      journeyLocationMarker = undefined
+      lastJourneyCoordinates = undefined
+      clearJourneyMarkers()
+      map.triggerRepaint()
+      setTimeTravelOpen(false)
+      setTimeTravelPlaying(false)
+      setTimeTravelMoving(false)
+      setTimeTravelPausedOnRoute(false)
+      setTimeTravelIndex(null)
+      if (!disposed && restoreCamera && previous) {
+        map.easeTo({ ...previous, duration: duration() })
+      }
+    }
+    const startTimeTravel = () => {
+      if (timeTravelSchedules.length === 0) return
+      cameraRequest++
+      map.stop()
+      discardSelection()
+      timeTravelCamera = {
+        center: [map.getCenter().lng, map.getCenter().lat],
+        zoom: map.getZoom(),
+        bearing: map.getBearing(),
+        pitch: map.getPitch(),
+      }
+      clearVisibleLocationMarkers()
+      clearJourneyMarkers()
+      map.triggerRepaint()
+      setLocationlessOpen(false)
+      setLocationlessSelected(undefined)
+      setRegionNavigationOpen(false)
+      setArchiveDataOpen(false)
+      setTimeTravelIndex(0)
+      setTimeTravelMoving(false)
+      setTimeTravelPausedOnRoute(false)
+      setTimeTravelPlaying(true)
+      setTimeTravelOpen(true)
+    }
+    const focusTimeTravelSchedule = (schedule: Schedule) => {
+      if (!timeTravelCamera || disposed) return
+      const location = schedule.locationId ? locationsById.get(schedule.locationId) : undefined
+      highlightTimeTravelLocation(location?.id)
+      if (!location) {
+        const markerPosition = journeyLocationMarker?.getLngLat()
+        if (markerPosition) lastJourneyCoordinates = markerPosition.toArray() as [number, number]
+        cameraRequest++
+        map.stop()
+        if (journeyAnimationFrame !== undefined) {
+          window.cancelAnimationFrame(journeyAnimationFrame)
+          journeyAnimationFrame = undefined
+        }
+        journeyLocationMarker?.remove()
+        journeyLocationMarker = undefined
+        setTimeTravelMoving(false)
+        return
+      }
+      const targetCoordinates = location.coordinates
+      const markerPosition = journeyLocationMarker?.getLngLat()
+      const fromCoordinates = markerPosition
+        ? markerPosition.toArray() as [number, number]
+        : lastJourneyCoordinates ?? [map.getCenter().lng, map.getCenter().lat]
+      lastJourneyCoordinates = targetCoordinates
+      if (!journeyLocationMarker) {
+        const markerElement = document.createElement('div')
+        markerElement.className = 'journey-location-marker'
+        markerElement.setAttribute('aria-hidden', 'true')
+        const carIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+        carIcon.setAttribute('viewBox', '0 0 36 36')
+        carIcon.setAttribute('aria-hidden', 'true')
+        const carBody = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        carBody.setAttribute('d', 'M11 4h14l5 10v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V14l5-10Zm1.3 3-3.5 8h18.4l-3.5-8H12.3ZM9 18v8h18v-8H9Z')
+        carBody.setAttribute('fill', '#fff')
+        const windshield = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        windshield.setAttribute('d', 'm12 9-2 5h16l-2-5H12Z')
+        windshield.setAttribute('fill', '#0f766e')
+        carIcon.append(carBody, windshield)
+        markerElement.append(carIcon)
+        journeyLocationMarker = new Marker({ element: markerElement, anchor: 'center' })
+          .setLngLat(fromCoordinates ?? targetCoordinates)
+          .addTo(map)
+      }
+      const request = ++cameraRequest
+      map.stop()
+      if (journeyAnimationFrame !== undefined) {
+        window.cancelAnimationFrame(journeyAnimationFrame)
+        journeyAnimationFrame = undefined
+      }
+      const motionDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 0
+        : JOURNEY_CAMERA_DURATION
+      const targetZoom = zoomForJourneyDistance(fromCoordinates, targetCoordinates)
+      const finishArrival = () => {
+        journeyLocationMarker?.setLngLat(targetCoordinates)
+        map.jumpTo({ center: targetCoordinates, zoom: targetZoom, bearing: 0, pitch: 0 })
+        revealScheduleMarker(schedule, targetCoordinates)
+        setTimeTravelMoving(false)
+      }
+      if (motionDuration > 0 && (
+        fromCoordinates[0] !== targetCoordinates[0] || fromCoordinates[1] !== targetCoordinates[1]
+      )) {
+        setTimeTravelMoving(true)
+        const startedAt = performance.now()
+        const startZoom = map.getZoom()
+        const headingLatitude = ((fromCoordinates[1] + targetCoordinates[1]) / 2) * Math.PI / 180
+        const heading = Math.atan2(
+          (targetCoordinates[0] - fromCoordinates[0]) * Math.cos(headingLatitude),
+          targetCoordinates[1] - fromCoordinates[1],
+        ) * 180 / Math.PI
+        const carIconElement = journeyLocationMarker.getElement().firstElementChild as SVGElement | null
+        if (carIconElement) carIconElement.style.transform = `rotate(${heading}deg)`
+        const animate = (now: number) => {
+          if (disposed || request !== cameraRequest || !journeyLocationMarker) return
+          const progress = Math.min((now - startedAt) / motionDuration, 1)
+          const easedProgress = progress * progress * (3 - 2 * progress)
+          const position: [number, number] = [
+            fromCoordinates[0] + (targetCoordinates[0] - fromCoordinates[0]) * easedProgress,
+            fromCoordinates[1] + (targetCoordinates[1] - fromCoordinates[1]) * easedProgress,
+          ]
+          journeyLocationMarker.setLngLat(position)
+          const zoom = startZoom + (targetZoom - startZoom) * easedProgress
+          map.jumpTo({ center: position, zoom, bearing: 0, pitch: 0 })
+          if (progress < 1) journeyAnimationFrame = window.requestAnimationFrame(animate)
+          else {
+            journeyAnimationFrame = undefined
+            finishArrival()
+          }
+        }
+        journeyAnimationFrame = window.requestAnimationFrame(animate)
+      } else {
+        finishArrival()
+      }
+      if (request === cameraRequest) setCurrentRegionCode(nearestRegionCode(location.coordinates))
+    }
+    timeTravelControllerRef.current = {
+      start: startTimeTravel,
+      stop: stopTimeTravel,
+      pauseMovement: pauseTimeTravelMovement,
+      focus: focusTimeTravelSchedule,
     }
     let popupEvents: AbortController | undefined
     const clearPopupEvents = () => {
@@ -129,6 +400,7 @@ function ArchiveMap() {
     const navigateToRegion = (countryCode: CountryCode) => {
       const region = archiveRegions.find((candidate) => candidate.countryCode === countryCode)
       if (!region || region.locations.length === 0) return
+      stopTimeTravel(false)
       setCurrentRegionCode(countryCode)
       const bounds = region.locations.reduce(
         (result, location) => result.extend(location.coordinates),
@@ -167,6 +439,7 @@ function ArchiveMap() {
     }
     navigateToRegionRef.current = navigateToRegion
     const goHome = () => {
+      stopTimeTravel(false)
       cameraRequest++
       map.stop()
       discardSelection()
@@ -200,6 +473,7 @@ function ArchiveMap() {
     }
 
     const selectLocation = (location: MappedLocation) => {
+      stopTimeTravel(false)
       setLocationlessOpen(false)
       setLocationlessSelected(undefined)
       setRegionNavigationOpen(false)
@@ -227,9 +501,12 @@ function ArchiveMap() {
       openPopup(location, locationSchedules.length === 1 ? locationSchedules[0] : undefined)
     }
 
-    const visibleMarkers = new Map<string, { marker: Marker; remove: () => void }>()
     const updateMarkers = () => {
       if (disposed || !map.getSource(sourceId) || !map.isSourceLoaded(sourceId)) return
+      if (timeTravelCamera) {
+        clearVisibleLocationMarkers()
+        return
+      }
       const visibleKeys = new Set<string>()
       const bounds = map.getBounds()
       for (const feature of map.querySourceFeatures(sourceId)) {
@@ -255,6 +532,7 @@ function ArchiveMap() {
         button.type = 'button'
         const isSingleSchedule = !isCluster && count === 1
         button.className = isCluster ? 'cluster-marker' : 'pin-marker'
+        if (!isCluster && locationId === activeTimeTravelLocationId) button.classList.add('journey-active-marker')
         if (!isCluster) {
           const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
           svg.setAttribute('viewBox', '0 0 44 44')
@@ -285,6 +563,7 @@ function ArchiveMap() {
         const selectMarker = async (event: MouseEvent) => {
           // 새 Popup이 동일한 클릭으로 즉시 닫히는 것을 방지합니다.
           event.stopPropagation()
+          stopTimeTravel(false)
           if (!isCluster) {
             if (location) selectLocation(location)
             return
@@ -352,11 +631,18 @@ function ArchiveMap() {
       map.off('moveend', updateCurrentRegion)
       visibleMarkers.forEach((entry) => entry.remove())
       visibleMarkers.clear()
+      journeyLocationMarker?.remove()
+      journeyLocationMarker = undefined
+      visitedScheduleMarkers.forEach((marker) => marker.remove())
+      visitedScheduleMarkers.clear()
+      if (journeyAnimationFrame !== undefined) window.cancelAnimationFrame(journeyAnimationFrame)
+      journeyAnimationFrame = undefined
       popup.remove()
       popup.off('close', closeSelection)
       clearPopupEvents()
       dismissMapSelectionRef.current = undefined
       navigateToRegionRef.current = undefined
+      timeTravelControllerRef.current = undefined
       map.remove()
     }
   }, [])
@@ -384,10 +670,92 @@ function ArchiveMap() {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3Z" /></svg>
         <span>처음으로</span>
       </button>
+      {timeTravelOpen && activeTimeTravelSchedule && (
+        <section
+          ref={timeTravelPanelRef}
+          className="time-travel-panel"
+          aria-label="시간순 일정 재생"
+          tabIndex={-1}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              timeTravelControllerRef.current?.stop(true)
+              timeTravelButtonRef.current?.focus()
+            }
+          }}
+        >
+          <header className="time-travel-header" aria-live="polite" aria-atomic="true">
+            <p>시간순 탐방</p>
+            <strong>{activeTimeTravelSchedule.date.replaceAll('-', '.')}</strong>
+            <button
+              type="button"
+              className="time-travel-close"
+              aria-label="시간순 보기 닫기"
+              onClick={() => {
+                timeTravelControllerRef.current?.stop(true)
+                timeTravelButtonRef.current?.focus()
+              }}
+            >×</button>
+          </header>
+          {!timeTravelPlaying && (
+            <div className="time-travel-current-schedule" aria-live="polite">
+              <strong>{activeTimeTravelSchedule.title}</strong>
+              <span>
+                {activeTimeTravelSchedule.locationId
+                  ? locationsById.get(activeTimeTravelSchedule.locationId)?.name ?? '장소 정보 없음'
+                  : '지도 위치 미등록'}
+                {activeTimeTravelSchedule.startTime ? ` · ${activeTimeTravelSchedule.startTime}` : ''}
+              </span>
+            </div>
+          )}
+          <div className="time-travel-controls">
+            <button type="button" aria-label="이전 일정" disabled={currentTimeTravelIndex === 0 || timeTravelMoving || timeTravelPausedOnRoute} onClick={() => {
+              setTimeTravelPlaying(false)
+              setTimeTravelPausedOnRoute(false)
+              setTimeTravelIndex(Math.max(0, currentTimeTravelIndex - 1))
+            }}>이전</button>
+            <button type="button" className="time-travel-play" onClick={() => {
+              if (timeTravelPlaying) {
+                setTimeTravelPlaying(false)
+                if (timeTravelMoving) {
+                  setTimeTravelPausedOnRoute(true)
+                  timeTravelControllerRef.current?.pauseMovement()
+                }
+                return
+              }
+              if (timeTravelPausedOnRoute && activeTimeTravelSchedule) {
+                setTimeTravelPausedOnRoute(false)
+                timeTravelControllerRef.current?.focus(activeTimeTravelSchedule)
+              } else if (currentTimeTravelIndex === timeTravelSchedules.length - 1) {
+                setTimeTravelIndex(0)
+              }
+              setTimeTravelPlaying(true)
+            }}>{timeTravelPlaying ? '일시정지' : '재생'}</button>
+            <button type="button" aria-label="다음 일정" disabled={currentTimeTravelIndex === timeTravelSchedules.length - 1 || timeTravelMoving || timeTravelPausedOnRoute} onClick={() => {
+              setTimeTravelPlaying(false)
+              setTimeTravelPausedOnRoute(false)
+              setTimeTravelIndex(Math.min(timeTravelSchedules.length - 1, currentTimeTravelIndex + 1))
+            }}>다음</button>
+          </div>
+        </section>
+      )}
       {(otherRegions.length > 0 || videoCallSchedules.length > 0 || schedules.length > 0) && (
         <section className="archive-explorer" aria-label="아카이브 탐색">
           <h2 className="archive-explorer-title">아카이브 탐색</h2>
           <div className="archive-explorer-actions">
+            {timeTravelSchedules.length > 0 && (
+              <button
+                ref={timeTravelButtonRef}
+                type="button"
+                className="archive-explorer-action"
+                onClick={() => timeTravelControllerRef.current?.start()}
+              >
+                <span className="archive-explorer-icon archive-explorer-icon-time" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2M4 5v5h5" /></svg>
+                </span>
+                <span className="archive-explorer-label">시간순으로 보기</span>
+                <span className="archive-explorer-count">{timeTravelSchedules.length}건</span>
+              </button>
+            )}
             {otherRegions.length > 0 && (
               <button
                 ref={regionNavigationButtonRef}
@@ -396,6 +764,7 @@ function ArchiveMap() {
                 aria-expanded={regionNavigationOpen}
                 aria-controls="region-navigation-panel"
                 onClick={() => {
+                  timeTravelControllerRef.current?.stop(false)
                   if (!regionNavigationOpen) {
                     setLocationlessOpen(false)
                     setLocationlessSelected(undefined)
@@ -420,6 +789,7 @@ function ArchiveMap() {
                 aria-expanded={locationlessOpen}
                 aria-controls="locationless-schedules"
                 onClick={() => {
+                  timeTravelControllerRef.current?.stop(false)
                   if (!locationlessOpen) {
                     dismissMapSelectionRef.current?.()
                     setRegionNavigationOpen(false)
@@ -444,6 +814,7 @@ function ArchiveMap() {
               aria-expanded={archiveDataOpen}
               aria-controls="archive-data-panel"
               onClick={() => {
+                timeTravelControllerRef.current?.stop(false)
                 if (!archiveDataOpen) {
                   dismissMapSelectionRef.current?.()
                   setLocationlessOpen(false)
