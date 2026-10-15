@@ -1472,6 +1472,16 @@ export const schedules: Schedule[] = [
     "startTime": "14:00",
     "setlistStatus": "unknown",
     "setlist": []
+  },
+  {
+    "id": "schedule-2026-10-23-01",
+    "locationId": "venue-081",
+    "eventFormat": "in-person",
+    "title": "2026 강릉 its 세계총회 개최기념 콘서트 K-뮤직콘서트",
+    "date": "2026-10-23",
+    "startTime": "18:00",
+    "setlistStatus": "unknown",
+    "setlist": []
   }
 ]
 

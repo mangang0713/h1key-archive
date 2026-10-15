@@ -14,6 +14,11 @@ const expectedHeaders = [
   '세트리스트 상태',
   '기억나는 곡 (확실한 순서대로 → 구분)',
 ]
+const locationHeaders = {
+  address: '자동 검색 주소',
+  coordinates: '자동 검색 좌표 [경도, 위도]',
+  status: '장소 좌표 확인 상태',
+}
 const statusByLabel = new Map([
   ['전체 확인', 'known'],
   ['일부 확인', 'partial'],
@@ -124,11 +129,28 @@ function validateDate(date) {
   return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === date
 }
 
-function findLocation(row, locations, line, errors) {
+function findLocation(row, geo, locations, line, errors) {
   const name = normalize(row[2])
-  const address = normalize(row[3])
+  const candidateConfirmed = geo.status === '확인 완료'
+  const candidateAddress = candidateConfirmed ? geo.address : ''
+  const address = normalize(candidateAddress || row[3])
+  let coordinates
+  try {
+    const parsedCoordinates = JSON.parse(geo.coordinates)
+    if (Array.isArray(parsedCoordinates) && parsedCoordinates.length === 2) {
+      const [longitude, latitude] = parsedCoordinates.map(Number)
+      if (Number.isFinite(longitude) && Number.isFinite(latitude)
+        && longitude >= -180 && longitude <= 180 && latitude >= -90 && latitude <= 90) {
+        coordinates = [longitude, latitude]
+      }
+    }
+  } catch {
+    coordinates = undefined
+  }
+  const hasCoordinates = coordinates !== undefined
+
   if (name === 'ㅇ') {
-    if (address) errors.push(`행 ${line}: 영상통화 표시 "ㅇ"과 실제 장소 주소를 함께 입력했습니다.`)
+    if (address || hasCoordinates) errors.push(`행 ${line}: 영상통화 표시 "ㅇ"과 실제 장소 정보를 함께 입력했습니다.`)
     return undefined
   }
   const byName = name ? locations.filter((location) => normalize(location.name) === name) : []
@@ -150,13 +172,41 @@ function findLocation(row, locations, line, errors) {
   }
 
   const matched = byName.length === 1 ? byName[0] : byAddress[0]
-  if (matched && address && normalize(matched.address) !== address) {
+  if (matched && row[3] && normalize(matched.address) !== normalize(row[3])) {
     errors.push(`행 ${line}: 장소명 "${row[2]}"과 주소가 기존 장소 정보와 일치하지 않습니다.`)
     return undefined
   }
   if (!matched && (name || address)) {
-    errors.push(`행 ${line}: 장소 "${row[2] || row[3]}"를 기존 locations.ts에서 찾지 못했습니다. 좌표 검토 후 장소를 먼저 등록해 주세요.`)
-    return undefined
+    if (!candidateConfirmed) {
+      errors.push(`행 ${line}: 새 장소 "${row[2] || row[3]}"의 자동 검색 결과를 확인 완료로 바꾼 뒤 가져와 주세요.`)
+      return undefined
+    }
+    if (!candidateAddress || !hasCoordinates) {
+      errors.push(`행 ${line}: 새 장소 "${row[2] || row[3]}"는 확인된 주소와 유효한 위도·경도가 필요합니다.`)
+      return undefined
+    }
+
+    const addressMatch = locations.find((location) => normalize(location.address) === address)
+    if (addressMatch) {
+      if (name && normalize(addressMatch.name) !== name) {
+        errors.push(`행 ${line}: 장소명과 자동 검색 주소가 서로 다른 기존 장소를 가리킵니다.`)
+        return undefined
+      }
+      return addressMatch.id
+    }
+
+    const highestVenueNumber = locations.reduce((highest, location) => {
+      const match = /^venue-(\d+)$/.exec(location.id)
+      return match ? Math.max(highest, Number(match[1])) : highest
+    }, 0)
+    const newLocation = {
+      id: `venue-${String(highestVenueNumber + 1).padStart(3, '0')}`,
+      name: row[2].trim(),
+      address: candidateAddress.trim(),
+      coordinates,
+    }
+    locations.push(newLocation)
+    return newLocation.id
   }
   return matched?.id
 }
@@ -178,7 +228,7 @@ function parseScheduleRows(rows, locations, songs, currentSchedules) {
 
   const titleCounts = new Map()
   const imported = []
-  for (const { row, line } of rows) {
+  for (const { row, geo, line } of rows) {
     const title = row[0]?.trim() ?? ''
     const date = row[1]?.trim() ?? ''
     const startTime = row[4]?.trim() ?? ''
@@ -224,7 +274,7 @@ function parseScheduleRows(rows, locations, songs, currentSchedules) {
       setlist.push(song.id)
     }
 
-    const locationId = findLocation(row, locations, line, errors)
+    const locationId = findLocation(row, geo, locations, line, errors)
     const identity = `${date}|${normalize(title)}`
     const prior = currentByIdentity.get(identity)?.shift()
     const eventFormat = prior?.eventFormat ?? (
@@ -266,7 +316,11 @@ function parseScheduleRows(rows, locations, songs, currentSchedules) {
     if (dayOrders.has(key)) errors.push(`${schedule.date}: 같은 날짜 순서 ${schedule.orderInDay}가 중복됩니다.`)
     dayOrders.add(key)
   }
-  return { imported, errors, addedSongs }
+  return { imported, errors, addedSongs, locations }
+}
+
+function serializeLocations(locations) {
+  return `import type { Location } from '../types/archive'\n\n// 광장·캠퍼스·관광특구처럼 넓은 장소는 실제 무대 좌표가 아닌 지도 탐색용 대표 지점을 사용합니다.\nexport const locations: Location[] = ${JSON.stringify(locations, null, 2)}\n`
 }
 
 function serializeSchedules(schedules) {
@@ -290,8 +344,15 @@ async function main() {
   const missingHeaders = expectedHeaders.filter((header) => !headers.includes(header))
   if (missingHeaders.length > 0) throw new Error(`필수 열을 찾지 못했습니다: ${missingHeaders.join(', ')}`)
   const indices = expectedHeaders.map((header) => headers.indexOf(header))
+  const geoIndices = Object.fromEntries(Object.entries(locationHeaders)
+    .map(([key, header]) => [key, headers.indexOf(header)]))
   const rows = table
-    .map((row, index) => ({ row: indices.map((column) => row[column] ?? ''), line: index + 2 }))
+    .map((row, index) => ({
+      row: indices.map((column) => row[column] ?? ''),
+      geo: Object.fromEntries(Object.entries(geoIndices)
+        .map(([key, column]) => [key, column >= 0 ? row[column] ?? '' : ''])),
+      line: index + 2,
+    }))
     .filter(({ row }) => row.some((value) => value.trim() !== ''))
 
   const [locationsSource, songsSource, schedulesSource] = await Promise.all([
@@ -302,7 +363,7 @@ async function main() {
   const locations = extractJsonArray(locationsSource, 'locations')
   const songs = readSongCatalog(songsSource)
   const currentSchedules = extractJsonArray(schedulesSource, 'schedules')
-  const { imported, errors, addedSongs } = parseScheduleRows(rows, locations, songs, currentSchedules)
+  const { imported, errors, addedSongs, locations: importedLocations } = parseScheduleRows(rows, locations, songs, currentSchedules)
   if (errors.length > 0) {
     console.error(`가져오기 중단: ${errors.length}개 항목을 검토해 주세요.`)
     for (const error of errors) console.error(`- ${error}`)
@@ -312,6 +373,7 @@ async function main() {
 
   const summary = {
     schedules: imported.length,
+    locations: importedLocations.length,
     songs: songs.length,
     withLocation: imported.filter((schedule) => schedule.locationId).length,
     withoutLocation: imported.filter((schedule) => !schedule.locationId).length,
@@ -329,10 +391,11 @@ async function main() {
 
   const songsOutput = `import type { Song } from '../types/archive'\n\n// 사용자 확인 세트리스트에서 실제로 참조되는 곡과 커버 기록입니다.\nexport const songs: Song[] = ${JSON.stringify(songs, null, 2)}\n`
   await Promise.all([
+    writeFile(path.join(root, 'src/data/locations.ts'), serializeLocations(importedLocations), 'utf8'),
     writeFile(path.join(root, 'src/data/schedules.ts'), serializeSchedules(imported), 'utf8'),
     writeFile(path.join(root, 'src/data/songs.ts'), songsOutput, 'utf8'),
   ])
-  console.log('src/data/schedules.ts와 src/data/songs.ts에 반영했습니다.')
+  console.log('src/data/locations.ts, src/data/schedules.ts, src/data/songs.ts에 반영했습니다.')
 }
 
 main().catch((error) => {

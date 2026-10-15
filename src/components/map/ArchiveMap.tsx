@@ -1,16 +1,23 @@
 ﻿import { useEffect, useRef, useState } from 'react'
 import { LngLatBounds, Map as MapLibreMap, Marker, Popup, setWorkerUrl } from 'maplibre-gl'
 import type { GeoJSONSource } from 'maplibre-gl'
-import type { FeatureCollection, Point } from 'geojson'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './ArchiveMap.css'
 import { createSchedulePopupContent } from './SchedulePopupContent'
+import {
+  archiveRegions,
+  locationPoints,
+  locationsById,
+  nearestRegionCode,
+  schedulesByLocation,
+  videoCallSchedules,
+  type MappedLocation,
+} from './archiveMapData'
 import LocationlessSchedulePanel from '../schedule/LocationlessSchedulePanel'
 import ArchiveExplorerPanel from '../archive/ArchiveExplorerPanel'
-import { locations } from '../../data/locations'
 import { schedules } from '../../data/schedules'
-import type { CountryCode, Location, Schedule } from '../../types/archive'
+import type { CountryCode, Schedule } from '../../types/archive'
 
 setWorkerUrl(workerUrl)
 
@@ -19,70 +26,6 @@ const INITIAL_CAMERA = { center: [127.8, 36.3] as [number, number], zoom: 6, bea
 const DETAIL_ZOOM = 12
 const CAMERA_DURATION = 450
 type SavedCamera = { center: [number, number]; zoom: number; bearing: number; pitch: number }
-type MappedLocation = Location & { coordinates: [number, number] }
-const hasCoordinates = (location: Location): location is MappedLocation => location.coordinates !== undefined
-const locationsById = new Map(locations.filter(hasCoordinates).map((location) => [location.id, location]))
-const schedulesByLocation = new Map(
-  locations.map((location) => [
-    location.id,
-    schedules.filter((schedule) => schedule.locationId === location.id)
-      .sort((a, b) => a.date.localeCompare(b.date)
-        || (a.orderInDay ?? Infinity) - (b.orderInDay ?? Infinity)
-        || (a.startTime ?? '99').localeCompare(b.startTime ?? '99')
-        || a.id.localeCompare(b.id)),
-  ]),
-)
-const videoCallSchedules = schedules
-  .filter((schedule) => schedule.eventFormat === 'online' && schedule.locationId === undefined)
-  .sort((a, b) => a.date.localeCompare(b.date)
-    || (a.orderInDay ?? Infinity) - (b.orderInDay ?? Infinity)
-    || (a.startTime ?? '99').localeCompare(b.startTime ?? '99')
-    || a.id.localeCompare(b.id))
-const locationPoints: FeatureCollection<Point> = {
-  type: 'FeatureCollection',
-  features: locations.filter(hasCoordinates).map((location) => ({
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: location.coordinates },
-    properties: { locationId: location.id },
-  })),
-}
-const regionLabels: Array<{ countryCode: CountryCode; label: string }> = [
-  { countryCode: 'KR', label: '한국' },
-  { countryCode: 'CN', label: '중국' },
-  { countryCode: 'JP', label: '일본' },
-  { countryCode: 'TH', label: '태국' },
-]
-const archiveRegions = regionLabels.map(({ countryCode, label }) => {
-  const regionLocations = locations.filter((location): location is MappedLocation =>
-    (location.countryCode ?? 'KR') === countryCode && hasCoordinates(location)
-      && (schedulesByLocation.get(location.id)?.length ?? 0) > 0)
-  const scheduleCount = regionLocations.reduce(
-    (total, location) => total + (schedulesByLocation.get(location.id)?.length ?? 0),
-    0,
-  )
-  return { countryCode, label, locations: regionLocations, scheduleCount }
-}).filter((region) => region.locations.length > 0)
-
-// 지도 중심에서 가장 가까운 일정 장소의 국가를 현재 탐색 지역으로 사용합니다.
-function nearestRegionCode(center: [number, number]): CountryCode {
-  const [longitude, latitude] = center
-  let nearestCode: CountryCode = 'KR'
-  let nearestDistance = Infinity
-  for (const region of archiveRegions) {
-    for (const location of region.locations) {
-      const latitudeScale = Math.cos(((location.coordinates[1] + latitude) / 2) * Math.PI / 180)
-      const distance = Math.hypot(
-        (location.coordinates[0] - longitude) * latitudeScale,
-        location.coordinates[1] - latitude,
-      )
-      if (distance < nearestDistance) {
-        nearestDistance = distance
-        nearestCode = region.countryCode
-      }
-    }
-  }
-  return nearestCode
-}
 
 function ArchiveMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
