@@ -27,6 +27,7 @@ const DETAIL_ZOOM = 12
 const CAMERA_DURATION = 450
 const JOURNEY_CAMERA_DURATION = 1500
 const JOURNEY_STOP_DELAY = 1800
+const JOURNEY_TILE_WAIT_MAX = 1500
 const JOURNEY_MIN_ZOOM = 7.5
 const JOURNEY_MAX_ZOOM = 13
 const JOURNEY_START_DATE = '2026-02-21'
@@ -109,6 +110,10 @@ function ArchiveMap() {
       ...INITIAL_CAMERA,
       minPitch: 0,
       maxPitch: 0,
+      // 이동·확대 중 이전 배율 타일을 유지해 새 타일 로딩 동안 지도가 비어 보이지 않게 합니다.
+      cancelPendingTileRequestsWhileZooming: false,
+      // 시간순 탐방에서 이미 지난 지역의 타일을 기본값보다 조금 더 오래 보관합니다.
+      maxTileCacheZoomLevels: 6,
       dragRotate: false,
       pitchWithRotate: false,
       touchPitch: false,
@@ -134,7 +139,19 @@ function ArchiveMap() {
     let journeyAnimationFrame: number | undefined
     const visitedScheduleMarkers = new Map<string, Marker>()
     let cameraRequest = 0
+    let journeyTileWaitTimeout: number | undefined
+    let journeyIdleHandler: (() => void) | undefined
     const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : CAMERA_DURATION
+    const cancelJourneyTileWait = () => {
+      if (journeyTileWaitTimeout !== undefined) {
+        window.clearTimeout(journeyTileWaitTimeout)
+        journeyTileWaitTimeout = undefined
+      }
+      if (journeyIdleHandler) {
+        map.off('idle', journeyIdleHandler)
+        journeyIdleHandler = undefined
+      }
+    }
     const discardSelection = () => {
       // 처음으로/클러스터 선택은 이전 카메라로 복원하지 않습니다.
       savedCamera = undefined
@@ -172,6 +189,7 @@ function ArchiveMap() {
     }
     const pauseTimeTravelMovement = () => {
       cameraRequest++
+      cancelJourneyTileWait()
       map.stop()
       if (journeyAnimationFrame !== undefined) {
         window.cancelAnimationFrame(journeyAnimationFrame)
@@ -200,6 +218,7 @@ function ArchiveMap() {
     const stopTimeTravel = (restoreCamera: boolean) => {
       const previous = timeTravelCamera
       timeTravelCamera = undefined
+      cancelJourneyTileWait()
       if (previous) {
         cameraRequest++
         map.stop()
@@ -226,6 +245,7 @@ function ArchiveMap() {
     const startTimeTravel = () => {
       if (timeTravelSchedules.length === 0) return
       cameraRequest++
+      cancelJourneyTileWait()
       map.stop()
       discardSelection()
       timeTravelCamera = {
@@ -249,6 +269,7 @@ function ArchiveMap() {
     }
     const focusTimeTravelSchedule = (schedule: Schedule) => {
       if (!timeTravelCamera || disposed) return
+      cancelJourneyTileWait()
       const location = schedule.locationId ? locationsById.get(schedule.locationId) : undefined
       highlightTimeTravelLocation(location?.id)
       if (!location) {
@@ -302,9 +323,17 @@ function ArchiveMap() {
       const targetZoom = zoomForJourneyDistance(fromCoordinates, targetCoordinates)
       const finishArrival = () => {
         journeyLocationMarker?.setLngLat(targetCoordinates)
+        const finishTileWait = () => {
+          cancelJourneyTileWait()
+          if (disposed || request !== cameraRequest) return
+          revealScheduleMarker(schedule, targetCoordinates)
+          setTimeTravelMoving(false)
+        }
+        setTimeTravelMoving(true)
+        journeyIdleHandler = finishTileWait
+        map.on('idle', finishTileWait)
+        journeyTileWaitTimeout = window.setTimeout(finishTileWait, JOURNEY_TILE_WAIT_MAX)
         map.jumpTo({ center: targetCoordinates, zoom: targetZoom, bearing: 0, pitch: 0 })
-        revealScheduleMarker(schedule, targetCoordinates)
-        setTimeTravelMoving(false)
       }
       if (motionDuration > 0 && (
         fromCoordinates[0] !== targetCoordinates[0] || fromCoordinates[1] !== targetCoordinates[1]
@@ -624,6 +653,7 @@ function ArchiveMap() {
     return () => {
       disposed = true
       cameraRequest++
+      cancelJourneyTileWait()
       homeButton?.removeEventListener('click', goHome)
       map.stop()
       map.off('load', addLocations)
@@ -696,17 +726,17 @@ function ArchiveMap() {
               }}
             >×</button>
           </header>
-          {!timeTravelPlaying && (
-            <div className="time-travel-current-schedule" aria-live="polite">
-              <strong>{activeTimeTravelSchedule.title}</strong>
+          <div className="time-travel-current-schedule" aria-live="polite" aria-atomic="true">
+            <strong>{activeTimeTravelSchedule.title}</strong>
+            {!timeTravelPlaying && (
               <span>
                 {activeTimeTravelSchedule.locationId
                   ? locationsById.get(activeTimeTravelSchedule.locationId)?.name ?? '장소 정보 없음'
                   : '지도 위치 미등록'}
                 {activeTimeTravelSchedule.startTime ? ` · ${activeTimeTravelSchedule.startTime}` : ''}
               </span>
-            </div>
-          )}
+            )}
+          </div>
           <div className="time-travel-controls">
             <button type="button" aria-label="이전 일정" disabled={currentTimeTravelIndex === 0 || timeTravelMoving || timeTravelPausedOnRoute} onClick={() => {
               setTimeTravelPlaying(false)
