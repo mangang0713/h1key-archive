@@ -1,0 +1,4 @@
+project_id = "h1key-activity-archive"
+
+[functions.community-api]
+verify_jwt = false
