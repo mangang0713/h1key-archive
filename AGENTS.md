@@ -10,8 +10,13 @@
 ## 기술과 책임
 - React + TypeScript + Vite + MapLibre GL JS를 유지한다. OpenFreeMap Liberty는 현재 임시 스타일/타일 제공자다.
 - 기존 파일과 구조를 활용하며 필요한 부분만 수정한다. 백엔드, 데이터베이스, 상태관리 라이브러리, 불필요한 추상화나 폴더는 요구가 확인되기 전 도입하지 않는다.
-- `src/App.tsx`: 화면 조립.
-- `src/components/map/ArchiveMap.tsx`: 지도, 장소 마커, 클러스터, 카메라, Popup 연결과 생명주기.
+- `src/App.tsx`: 해시 경로와 페이지 컴포넌트를 연결한다. 새 페이지는 실제 기능이 정해진 뒤 경로 목록에 등록한다.
+- `src/pages/ArchivePage.tsx`: 지도 중심 메인 페이지를 조립한다. 추가 페이지는 기능 범위가 정해진 뒤 `src/pages/`에 둔다.
+- `src/components/map/ArchiveMap.tsx`: MapLibre 지도 생명주기와 마커·카메라·Popup 기능을 연결하는 중심 컴포넌트.
+- `src/components/map/timeTravelController.ts`: 시간순 카메라 이동, 도착 마커와 애니메이션 정리.
+- `src/components/map/regionNavigationController.ts`: 현재 이동을 취소하고 목표 지역으로 축소·이동·확대하는 카메라 흐름.
+- `src/components/map/TimeTravelPanel.tsx`, `RegionNavigationPanel.tsx`: 시간순 탐방과 지역 선택 UI.
+- `src/components/map/createLocationMarkerElement.ts`: 지도 클러스터·장소 마커 DOM 생성.
 - `src/components/map/SchedulePopupContent.ts`: 스케줄 목록·상세 DOM 생성. 지도와 카메라는 관리하지 않는다.
 - `src/data/{locations,schedules,songs}.ts`: 원본 데이터. `src/types/archive.ts`: 공통 타입.
 - 기존 DOM Popup 방식을 유지하며 분리는 실제 책임이 커질 때만 수행한다.

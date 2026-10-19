@@ -8,7 +8,7 @@ H1-KEY의 활동 기록을 **지도에서 장소와 날짜를 따라 탐색**할
 
 ## 테스트 배포
 
-- [공개 테스트 사이트](https://h1key-activity-archive-test.decentkid32.chatgpt.site/) — 2026-10-15 기준, 링크가 있는 누구나 로그인 없이 접근할 수 있습니다.
+- [공개 테스트 사이트](https://mangang0713.github.io/h1key-archive/) — 링크가 있는 누구나 로그인 없이 접근할 수 있습니다.
 - 현재는 기능 확인을 위한 테스트 배포입니다. 사진과 영상은 X의 외부 리소스를 사용하므로 X의 로딩 정책이나 네트워크 상태에 따라 표시가 달라질 수 있습니다.
 - 정식 운영 전에는 최종 도메인·배포 환경과 미디어 공개 범위 및 권리 확인을 진행합니다.
 
@@ -71,12 +71,20 @@ npm run preview
 
 ```text
 src/
+├─ App.tsx                      # 해시 경로에 따라 페이지 선택
+├─ pages/
+│  └─ ArchivePage.tsx            # 지도 중심 메인 페이지
 ├─ components/
 │  ├─ map/
-│  │  ├─ ArchiveMap.tsx           # 지도, 마커, 카메라 및 Popup 연결
-│  │  ├─ ArchiveMap.css           # 지도 관련 스타일
-│  │  ├─ archiveMapData.ts        # 지도에 필요한 장소·일정 데이터 계산
-│  │  └─ SchedulePopupContent.ts # 장소 스케줄 Popup 목록 및 상세
+│  │  ├─ ArchiveMap.tsx                  # 지도 생명주기와 지도 기능 연결
+│  │  ├─ TimeTravelPanel.tsx             # 시간순 탐방 조작 UI
+│  │  ├─ RegionNavigationPanel.tsx       # 지역 선택 UI
+│  │  ├─ createLocationMarkerElement.ts  # 클러스터·장소 마커 UI 생성
+│  │  ├─ timeTravelController.ts        # 시간순 이동과 도착 마커
+│  │  ├─ regionNavigationController.ts  # 지역 간 카메라 이동
+│  │  ├─ ArchiveMap.css                  # 지도 관련 스타일
+│  │  ├─ archiveMapData.ts               # 지도에 필요한 장소·일정 데이터 계산
+│  │  └─ SchedulePopupContent.ts        # 장소 스케줄 Popup 목록 및 상세
 │  ├─ schedule/
 │     ├─ LocationlessSchedulePanel.tsx # 장소 없는 일정의 목록 및 상세 UI
 │     └─ LocationlessSchedulePanel.css # 해당 패널 스타일
@@ -91,8 +99,9 @@ src/
 │  └─ songStats.ts               # 세트리스트에서 곡별 공연 일정 수 계산
 ├─ types/
 │  └─ archive.ts                 # Location, Schedule, Song 타입
-└─ App.tsx
 ```
+
+페이지 경로는 GitHub Pages에서 새로고침해도 동작하도록 해시 형식을 사용합니다. 현재는 지도 아카이브가 유일한 메인 페이지이며, 추가 기능의 범위와 화면이 정해지면 `src/pages/`에 페이지를 만들고 `src/App.tsx`의 경로 목록에 연결할 수 있습니다.
 
 장소와 스케줄은 **1:N 관계**로 관리하며, 세트리스트에는 곡 제목 대신 곡 ID를 저장합니다.
 
