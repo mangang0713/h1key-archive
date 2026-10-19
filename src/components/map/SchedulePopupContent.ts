@@ -212,6 +212,11 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     })
 
     content.append(tablist, panelContainer)
+    const communityLink = document.createElement('a')
+    communityLink.className = 'schedule-community-link'
+    communityLink.href = `#/schedule/${encodeURIComponent(selected.id)}`
+    communityLink.textContent = '좋아요와 후기 보기'
+    content.append(communityLink)
   } else {
     const listBody = document.createElement('div')
     listBody.className = 'schedule-list-body'

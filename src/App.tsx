@@ -1,29 +1,35 @@
-import { useSyncExternalStore, type ReactNode } from 'react'
-import ArchivePage from './pages/ArchivePage'
+import { lazy, Suspense } from 'react'
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from './features/auth/AuthProvider'
+import SiteLayout from './components/layout/SiteLayout'
 
-type AppRoute = {
-  path: string
-  render: () => ReactNode
-}
-
-// 새 페이지를 만들면 이 목록에 경로와 컴포넌트를 연결합니다.
-const routes: AppRoute[] = [{ path: '/', render: () => <ArchivePage /> }]
-
-function getCurrentPath(): string {
-  const path = window.location.hash.slice(1).split('?')[0] || '/'
-  return routes.some((route) => route.path === path) ? path : '/'
-}
-
-function subscribeToPageChanges(onChange: () => void) {
-  window.addEventListener('hashchange', onChange)
-  return () => window.removeEventListener('hashchange', onChange)
-}
+const ArchivePage = lazy(() => import('./pages/ArchivePage'))
+const AccountPage = lazy(() => import('./pages/AccountPage'))
+const AdminReportsPage = lazy(() => import('./pages/AdminReportsPage'))
+const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage'))
+const CommunityPolicyPage = lazy(() => import('./pages/CommunityPolicyPage'))
+const GuestbookPage = lazy(() => import('./pages/GuestbookPage'))
+const SchedulePage = lazy(() => import('./pages/SchedulePage'))
 
 function App() {
-  const path = useSyncExternalStore(subscribeToPageChanges, getCurrentPath, () => '/')
-  const route = routes.find((item) => item.path === path) ?? routes[0]
-
-  return route.render()
+  return (
+    <HashRouter>
+      <AuthProvider>
+        <Routes>
+          <Route element={<SiteLayout />}>
+            <Route index element={<Suspense fallback={<p className="page-loading" role="status">지도를 불러오는 중입니다.</p>}><ArchivePage /></Suspense>} />
+            <Route path="guestbook" element={<Suspense fallback={<p className="page-loading" role="status">페이지를 불러오는 중입니다.</p>}><GuestbookPage /></Suspense>} />
+            <Route path="schedule/:scheduleId" element={<Suspense fallback={<p className="page-loading" role="status">일정 정보를 불러오는 중입니다.</p>}><SchedulePage /></Suspense>} />
+            <Route path="account" element={<Suspense fallback={<p className="page-loading" role="status">계정 정보를 불러오는 중입니다.</p>}><AccountPage /></Suspense>} />
+            <Route path="admin/reports" element={<Suspense fallback={<p className="page-loading" role="status">운영 화면을 불러오는 중입니다.</p>}><AdminReportsPage /></Suspense>} />
+            <Route path="admin/settings" element={<Suspense fallback={<p className="page-loading" role="status">운영 화면을 불러오는 중입니다.</p>}><AdminSettingsPage /></Suspense>} />
+            <Route path="policy/:policyType" element={<Suspense fallback={<p className="page-loading" role="status">안내를 불러오는 중입니다.</p>}><CommunityPolicyPage /></Suspense>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </AuthProvider>
+    </HashRouter>
+  )
 }
 
 export default App
