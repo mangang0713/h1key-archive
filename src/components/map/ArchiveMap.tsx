@@ -567,7 +567,7 @@ function ArchiveMap() {
           svg.setAttribute('viewBox', '0 0 44 44')
           svg.setAttribute('aria-hidden', 'true')
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-          path.setAttribute('d', 'M22 2C12 2 6 9 6 18c0 11 16 24 16 24s16-13 16-24C38 9 32 2 22 2Z')
+          path.setAttribute('d', 'M22 2C12 2 6 9 6 18c0 12 16 26 16 26s16-14 16-26C38 9 32 2 22 2Z')
           const center = document.createElementNS('http://www.w3.org/2000/svg', isSingleSchedule ? 'circle' : 'text')
           if (isSingleSchedule) {
             center.setAttribute('cx', '22')
