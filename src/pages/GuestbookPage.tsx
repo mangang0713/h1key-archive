@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthProvider'
 import { acceptCommunityTerms, deleteCommunityContent, getGuestbookPosts, reportCommunityContent, saveGuestbookPost } from '../features/community/api'
@@ -13,6 +13,8 @@ function GuestbookPage() {
   const [posts, setPosts] = useState<GuestbookPost[]>([])
   const [body, setBody] = useState('')
   const [files, setFiles] = useState<File[]>([])
+  const [photoPreviews, setPhotoPreviews] = useState<Array<{ file: File; url: string }>>([])
+  const previewUrlsRef = useRef<string[]>([])
   const [editingId, setEditingId] = useState<string>()
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(false)
@@ -36,6 +38,38 @@ function GuestbookPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadPosts() }, [loadPosts])
 
+  useEffect(() => () => {
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+  }, [])
+
+  function replaceSelectedPhotos(nextFiles: File[]) {
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    const previews = nextFiles.map((file) => ({ file, url: URL.createObjectURL(file) }))
+    previewUrlsRef.current = previews.map((preview) => preview.url)
+    setFiles(nextFiles)
+    setPhotoPreviews(previews)
+  }
+
+  function addSelectedPhotos(newFiles: File[]) {
+    const fileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}:${file.type}`
+    const existing = new Set(files.map(fileKey))
+    const additions = newFiles.filter((file) => {
+      const key = fileKey(file)
+      if (existing.has(key)) return false
+      existing.add(key)
+      return true
+    })
+    const remaining = MAX_POST_IMAGES - files.length
+    if (additions.length > remaining) {
+      setMessage(`사진은 게시물당 최대 ${MAX_POST_IMAGES}장까지 선택할 수 있어 ${remaining}장만 추가했습니다.`)
+    } else if (additions.length < newFiles.length) {
+      setMessage('이미 선택한 사진은 중복으로 추가하지 않았습니다.')
+    } else {
+      setMessage('')
+    }
+    replaceSelectedPhotos([...files, ...additions.slice(0, remaining)])
+  }
+
   async function submitPost(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (body.trim().length < 2) { setMessage('축하 글을 두 글자 이상 입력해 주세요.'); return }
@@ -49,7 +83,7 @@ function GuestbookPage() {
       await acceptCommunityTerms()
       await saveGuestbookPost(body.trim(), files, editingId, turnstileToken)
       setBody('')
-      setFiles([])
+      replaceSelectedPhotos([])
       setEditingId(undefined)
       await loadPosts()
       setTurnstileResetKey((key) => key + 1)
@@ -92,14 +126,23 @@ function GuestbookPage() {
           <textarea id="guestbook-body" value={body} maxLength={1200} rows={4} placeholder="H1-KEY에게 전하고 싶은 마음을 적어 주세요." onChange={(event) => setBody(event.target.value)} />
           <div className="form-footer">
             <label className="file-picker" htmlFor="guestbook-images">사진 추가 (최대 3장)</label>
-            <input id="guestbook-images" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setFiles(Array.from(event.target.files ?? []).slice(0, MAX_POST_IMAGES))} />
-            <span>{body.length}/1200자 · 계정당 사진 10장, 총 10MB까지</span>
+            <input id="guestbook-images" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => {
+              addSelectedPhotos(Array.from(event.target.files ?? []))
+              event.target.value = ''
+            }} />
+            <span>{files.length}/{MAX_POST_IMAGES}장 선택 · {body.length}/1200자 · 계정당 사진 10장, 총 10MB까지</span>
           </div>
-          <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileResetKey} />
+          {photoPreviews.length > 0 && <div className="guestbook-photo-previews" aria-label="업로드할 사진 미리보기">
+            {photoPreviews.map(({ file, url }, index) => <figure key={`${file.name}-${file.lastModified}-${index}`}>
+              <img src={url} alt={`${file.name} 미리보기`} />
+              <figcaption>{file.name}</figcaption>
+              <button type="button" aria-label={`${file.name} 사진 제거`} onClick={() => replaceSelectedPhotos(files.filter((_, fileIndex) => fileIndex !== index))}>×</button>
+            </figure>)}
+          </div>}
           <label className="consent-field"><input type="checkbox" required checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} /><span><Link to="/policy/privacy" target="_blank" rel="noreferrer">개인정보·공개 안내</Link>를 확인했고, 글과 선택한 사진이 공개되는 데 동의합니다.</span></label>
-          {files.length > 0 && <p className="community-small">선택한 사진: {files.map((file) => file.name).join(', ')}</p>}
+          <div className="turnstile-field"><span>자동 등록 방지 확인</span><TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileResetKey} /></div>
           <button className="primary-button" disabled={busy}>{busy ? '저장 중…' : editingId ? '수정 저장' : '축하 글 남기기'}</button>
-          {editingId && <button className="text-button" type="button" onClick={() => { setEditingId(undefined); setBody(''); setFiles([]) }}>수정 취소</button>}
+          {editingId && <button className="text-button" type="button" onClick={() => { setEditingId(undefined); setBody(''); replaceSelectedPhotos([]) }}>수정 취소</button>}
         </form>
       )}
       {message && <p className="community-message" role="status">{message}</p>}

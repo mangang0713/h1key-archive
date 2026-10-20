@@ -34,6 +34,14 @@
 .form-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; color: #777b88; font-size: 12px; }
 .file-picker { display: inline-flex; min-height: 40px; align-items: center; padding: 0 12px; border: 1px solid #ded8ec; border-radius: 10px; background: #faf8ff; cursor: pointer; }
 .community-form input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+.guestbook-photo-previews { display: flex; flex-wrap: wrap; gap: 10px; }
+.guestbook-photo-previews figure { position: relative; width: 96px; margin: 0; }
+.guestbook-photo-previews img { display: block; width: 96px; height: 96px; border-radius: 10px; background: #f1f1f5; object-fit: cover; }
+.guestbook-photo-previews figcaption { overflow: hidden; margin-top: 4px; color: #777b88; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.guestbook-photo-previews button { position: absolute; top: 5px; right: 5px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgb(24 24 32 / 78%); color: #fff; font: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
+.guestbook-photo-previews button:focus-visible { outline: 3px solid #9b7be0; outline-offset: 2px; }
+.turnstile-field { display: grid; justify-items: start; gap: 6px; }
+.turnstile-field > span { color: #616575; font-size: 12px; font-weight: 650; }
 .community-list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 34px 2px 14px; }
 .community-list-heading h2 { margin: 0; font-size: 20px; }
 .community-list-heading span { color: #818594; font-size: 12px; }
@@ -70,7 +78,8 @@
 .admin-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; color: #34364a; font-weight: 650; }
 .admin-toggle input { width: 20px; height: 20px; accent-color: #6d28d9; }
 .consent-field { display: flex; align-items: flex-start; gap: 9px; color: #616575 !important; font-size: 12px !important; line-height: 1.6; }
-.consent-field input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: #6d28d9; }
+.community-form .consent-field input { box-sizing: border-box; width: 18px; height: 18px; flex: 0 0 18px; margin: 2px 0 0; padding: 0; accent-color: #6d28d9; }
+.consent-field span { min-width: 0; flex: 1; }
 .consent-field a { color: #5b21b6; }
 .storage-progress { display: block; width: 100%; height: 12px; accent-color: #6d28d9; }
 
