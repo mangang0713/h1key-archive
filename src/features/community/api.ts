@@ -163,7 +163,10 @@ export async function updateAdminCommunitySettings(settings: Partial<Pick<Commun
 }
 
 export async function updateProfile(displayName: string) {
-  return invoke('update-profile', { displayName })
+  const client = requireClient()
+  const { data, error } = await client.rpc('save_my_display_name', { p_display_name: displayName })
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function deleteAccount() {

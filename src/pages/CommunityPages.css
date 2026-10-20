@@ -8,6 +8,8 @@
 .account-card, .community-form, .schedule-setlist-card { margin: 22px 0; padding: 22px; border: 1px solid #e5e7ef; border-radius: 18px; background: #fff; box-shadow: 0 8px 28px rgb(23 28 45 / 5%); }
 .account-card h2, .schedule-setlist-card h2 { margin: 0 0 8px; font-size: 19px; }
 .account-card > p { color: #6a6e7d; line-height: 1.6; }
+.account-card > .account-current-name { margin: 0 0 14px; color: #6a6e7d; font-size: 14px; line-height: 1.6; }
+.account-current-name strong { color: #28263a; overflow-wrap: anywhere; }
 .provider-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 20px 0; }
 .provider-button, .primary-button, .secondary-button, .danger-button, .like-button { min-height: 44px; padding: 10px 15px; border: 1px solid #d9dbe5; border-radius: 11px; background: #fff; color: #25263a; font: inherit; font-weight: 700; cursor: pointer; transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease; }
 .provider-button:hover, .secondary-button:hover { background: #f7f5fc; }
@@ -42,6 +44,10 @@
 .user-photo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .user-photo-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: #f1f1f5; }
 .post-actions, .account-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.account-actions { align-items: center; justify-content: space-between; gap: 14px; }
+.account-danger-zone { display: flex; align-items: center; gap: 10px; margin-left: auto; color: #8b5a60; font-size: 12px; text-align: right; }
+.profile-setup-card { max-width: 560px; }
+.profile-login-link { display: inline-flex; align-items: center; text-decoration: none; }
 .load-more { display: block; margin: 20px auto; }
 .empty-state { padding: 32px 16px; border: 1px dashed #d8dbe4; border-radius: 14px; color: #787c8a; text-align: center; }
 .back-link { display: inline-flex; min-height: 42px; align-items: center; margin: -8px 0 16px; color: #5b21b6; font-weight: 700; text-decoration: none; }
@@ -73,4 +79,6 @@
   .user-post-card { padding: 15px; }
   .user-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .schedule-community-actions { align-items: flex-start; }
+  .account-actions { align-items: stretch; }
+  .account-danger-zone { align-items: flex-end; flex-direction: column; }
 }

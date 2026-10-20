@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth, type SocialProvider } from '../features/auth/AuthProvider'
 import { deleteAccount, getProfile, updateProfile } from '../features/community/api'
 import './CommunityPages.css'
@@ -9,19 +9,32 @@ function AccountPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const [displayName, setDisplayName] = useState('')
+  const [savedDisplayName, setSavedDisplayName] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
     if (!user) return
-    getProfile(user.id).then((profile) => setDisplayName(profile?.display_name ?? ''))
-      .catch((error: unknown) => setMessage(error instanceof Error ? error.message : '프로필을 불러오지 못했습니다.'))
+    const metadata = user.user_metadata
+    const suggestedName = [metadata.user_name, metadata.preferred_username, metadata.full_name, metadata.name]
+      .find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim() ?? ''
+    getProfile(user.id).then((profile) => {
+      const currentName = profile?.display_name ?? suggestedName
+      setDisplayName(currentName)
+      setSavedDisplayName(currentName)
+    })
+      .catch((error: unknown) => {
+        setDisplayName(suggestedName)
+        setSavedDisplayName(suggestedName)
+        setMessage(error instanceof Error ? error.message : '프로필을 불러오지 못했습니다.')
+      })
   }, [user])
 
   async function handleSignIn(provider: SocialProvider) {
     setBusy(true)
     setMessage('')
-    const returnTo = new URLSearchParams(location.search).get('returnTo') ?? '/guestbook'
+    const destination = new URLSearchParams(location.search).get('returnTo') ?? '/guestbook'
+    const returnTo = `/account/setup?next=${encodeURIComponent(destination)}`
     const error = await signIn(provider, returnTo)
     if (error) setMessage(error)
     setBusy(false)
@@ -33,6 +46,7 @@ function AccountPage() {
     setMessage('')
     try {
       await updateProfile(displayName)
+      setSavedDisplayName(displayName.trim())
       setMessage('표시 이름을 저장했습니다.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '저장하지 못했습니다.')
@@ -75,15 +89,19 @@ function AccountPage() {
       {!loading && user && (
         <div className="account-card">
           <h2>프로필</h2>
+          <p className="account-current-name">현재 공개 표시 이름: <strong>{savedDisplayName || '아직 설정되지 않음'}</strong></p>
           <form className="community-form" onSubmit={(event) => void handleSaveProfile(event)}>
             <label htmlFor="display-name">공개 표시 이름</label>
             <input id="display-name" value={displayName} maxLength={40} required onChange={(event) => setDisplayName(event.target.value)} />
             <button className="primary-button" disabled={busy}>저장</button>
           </form>
-          <p className="community-small">로그인 이메일은 표시되지 않습니다. <Link to="/guestbook">방명록으로 돌아가기</Link></p>
+          <p className="community-small">로그인 이메일은 공개 화면에 표시되지 않습니다.</p>
           <div className="account-actions">
             <button type="button" className="secondary-button" disabled={busy} onClick={() => void signOut().then((error) => error ? setMessage(error) : navigate('/'))}>로그아웃</button>
-            <button type="button" className="danger-button" disabled={busy} onClick={() => void handleDeleteAccount()}>계정 삭제</button>
+            <div className="account-danger-zone">
+              <span>계정과 연결된 반응·사진이 삭제됩니다.</span>
+              <button type="button" className="danger-button" disabled={busy} onClick={() => void handleDeleteAccount()}>계정 삭제</button>
+            </div>
           </div>
         </div>
       )}
