@@ -10,6 +10,7 @@ function AccountPage() {
   const navigate = useNavigate()
   const [displayName, setDisplayName] = useState('')
   const [savedDisplayName, setSavedDisplayName] = useState('')
+  const [profileSaved, setProfileSaved] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -44,10 +45,11 @@ function AccountPage() {
     event.preventDefault()
     setBusy(true)
     setMessage('')
+    setProfileSaved(false)
     try {
       await updateProfile(displayName)
       setSavedDisplayName(displayName.trim())
-      setMessage('표시 이름을 저장했습니다.')
+      setProfileSaved(true)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '저장하지 못했습니다.')
     } finally { setBusy(false) }
@@ -92,8 +94,9 @@ function AccountPage() {
           <p className="account-current-name">현재 공개 표시 이름: <strong>{savedDisplayName || '아직 설정되지 않음'}</strong></p>
           <form className="community-form" onSubmit={(event) => void handleSaveProfile(event)}>
             <label htmlFor="display-name">공개 표시 이름</label>
-            <input id="display-name" value={displayName} maxLength={40} required onChange={(event) => setDisplayName(event.target.value)} />
+            <input id="display-name" value={displayName} maxLength={40} required onChange={(event) => { setDisplayName(event.target.value); setProfileSaved(false) }} />
             <button className="primary-button" disabled={busy}>저장</button>
+            {profileSaved && <p className="account-save-feedback" role="status">공개 표시 이름을 저장했어요.</p>}
           </form>
           <p className="community-small">로그인 이메일은 공개 화면에 표시되지 않습니다.</p>
           <div className="account-actions">

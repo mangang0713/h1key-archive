@@ -23,6 +23,8 @@
 .community-form :focus-visible, .provider-button:focus-visible, .primary-button:focus-visible, .secondary-button:focus-visible, .danger-button:focus-visible, .like-button:focus-visible, .text-button:focus-visible { outline: 3px solid #9b7be0; outline-offset: 2px; }
 .primary-button { width: fit-content; border-color: #6d28d9; background: #6d28d9; color: #fff; }
 .primary-button:hover { background: #5b21b6; }
+.account-save-feedback { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; padding: 10px 12px; border: 1px solid #cce8dc; border-radius: 10px; background: #f1faf5; color: #276749; font-size: 13px; line-height: 1.5; }
+.account-save-feedback::before { content: '✓'; display: grid; width: 20px; height: 20px; flex: 0 0 20px; place-items: center; border-radius: 50%; background: #d9f0e3; color: #276749; font-size: 12px; font-weight: 800; }
 .secondary-button { width: fit-content; }
 .danger-button { width: fit-content; color: #a61b2b; border-color: #efbdc2; background: #fff7f7; }
 .text-button { min-height: 40px; padding: 8px 10px; border: 0; background: transparent; color: #5b21b6; font: inherit; font-weight: 650; cursor: pointer; }
