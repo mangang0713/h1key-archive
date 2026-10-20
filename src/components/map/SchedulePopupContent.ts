@@ -73,12 +73,27 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     tablist.setAttribute('aria-label', '행사 상세 정보')
     const panelContainer = document.createElement('div')
     panelContainer.className = 'schedule-tab-panels'
-    const tabs = [
+    const baseTabs = [
       { id: 'info', label: '행사 정보' },
-      { id: 'setlist', label: '세트리스트' },
-      { id: 'photos', label: `사진${selected.media?.photos?.length ? ` ${selected.media.photos.length}` : ''}` },
-      { id: 'videos', label: `영상${selected.media?.xPosts?.length ? ` ${selected.media.xPosts.length}` : ''}` },
+      ...(selected.setlist.length > 0 ? [{ id: 'setlist', label: '세트리스트' }] : []),
+      ...(selected.media?.photos?.length
+        ? [{ id: 'photos', label: `사진 ${selected.media.photos.length}` }]
+        : []),
+      ...(selected.media?.xPosts?.length
+        ? [{ id: 'videos', label: `영상 ${selected.media.xPosts.length}` }]
+        : []),
+    ]
+    const officialMediaTabs = [
+      { id: 'official-groups', label: '그룹 단체사진', items: selected.media?.officialGroupPhotos ?? [], kind: 'photos' },
+      { id: 'official-individuals', label: '개인 사진', items: selected.media?.officialIndividualPhotos ?? [], kind: 'photos' },
+      { id: 'official-reels', label: '릴스', items: selected.media?.officialReels ?? [], kind: 'links' },
     ] as const
+    const tabs = [
+      ...baseTabs,
+      ...officialMediaTabs
+        .filter((tab) => tab.items.length > 0)
+        .map((tab) => ({ id: tab.id, label: `${tab.label} ${tab.items.length}` })),
+    ]
     const tabButtons = new Map<string, HTMLButtonElement>()
     const panels = new Map<string, HTMLDivElement>()
 
@@ -126,39 +141,42 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     }
     infoPanel.append(details)
 
-    const setlistPanel = panels.get('setlist')!
-    const setlistStatus = document.createElement('p')
-    setlistStatus.className = 'schedule-setlist-status'
-    if (selected.setlistStatus === 'known' || selected.setlistStatus === 'partial' || selected.setlistStatus === 'provisional') {
-      const statusText = {
-        known: '확인 완료 · 공연 순서',
-        partial: '일부 확인 · 확인된 곡만 표시',
-        provisional: '임시 입력 · 실제 세트리스트 확인 필요',
-      } as const
-      setlistStatus.textContent = statusText[selected.setlistStatus]
-      const setlist = document.createElement('ol')
-      setlist.className = 'schedule-setlist'
-      selected.setlist.forEach((songId, index) => {
-        const item = document.createElement('li')
-        item.value = index + 1
-        const song = songsById.get(songId)
-        item.textContent = song ? song.title : `곡 정보 오류: 존재하지 않는 songId (${songId})`
-        if (!song) item.className = 'schedule-data-error'
-        setlist.append(item)
-      })
-      setlistPanel.append(setlistStatus, setlist)
-    } else {
-      setlistStatus.textContent = selected.setlistStatus === 'unknown' ? '세트리스트를 아직 확인하지 못했습니다.' : '이 행사에서는 곡 공연이 없었습니다.'
-      setlistPanel.append(setlistStatus)
+    const setlistPanel = panels.get('setlist')
+    if (setlistPanel) {
+      const setlistStatus = document.createElement('p')
+      setlistStatus.className = 'schedule-setlist-status'
+      if (selected.setlistStatus === 'known' || selected.setlistStatus === 'partial' || selected.setlistStatus === 'provisional') {
+        const statusText = {
+          known: '확인 완료 · 공연 순서',
+          partial: '일부 확인 · 확인된 곡만 표시',
+          provisional: '임시 입력 · 실제 세트리스트 확인 필요',
+        } as const
+        setlistStatus.textContent = statusText[selected.setlistStatus]
+        const setlist = document.createElement('ol')
+        setlist.className = 'schedule-setlist'
+        selected.setlist.forEach((songId, index) => {
+          const item = document.createElement('li')
+          item.value = index + 1
+          const song = songsById.get(songId)
+          item.textContent = song ? song.title : `곡 정보 오류: 존재하지 않는 songId (${songId})`
+          if (!song) item.className = 'schedule-data-error'
+          setlist.append(item)
+        })
+        setlistPanel.append(setlistStatus, setlist)
+      } else {
+        setlistStatus.textContent = selected.setlistStatus === 'unknown' ? '세트리스트를 아직 확인하지 못했습니다.' : '이 행사에서는 곡 공연이 없었습니다.'
+        setlistPanel.append(setlistStatus)
+      }
     }
 
-    const photosPanel = panels.get('photos')!
-    const videosPanel = panels.get('videos')!
+    const photosPanel = panels.get('photos')
+    const videosPanel = panels.get('videos')
     let photosInitialized = false
     let videosInitialized = false
+    const initializedOfficialMedia = new Set<string>()
     let disposePhotos: (() => void) | undefined
     const initializePhotos = () => {
-      if (photosInitialized) return
+      if (photosInitialized || !photosPanel) return
       photosInitialized = true
       if (selected.media?.photos?.length) {
         disposePhotos = renderPhotoGallery(photosPanel, selected.media.photos)
@@ -171,7 +189,7 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
       }
     }
     const initializeVideos = () => {
-      if (videosInitialized) return
+      if (videosInitialized || !videosPanel) return
       videosInitialized = true
       if (selected.media?.xPosts?.length) {
         renderXPostEmbeds(videosPanel, selected.media.xPosts, signal)
@@ -180,6 +198,44 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
         empty.className = 'schedule-tab-empty'
         empty.textContent = '연결된 영상 게시물이 없습니다.'
         videosPanel.append(empty)
+      }
+    }
+    const initializeOfficialMedia = (tabId: string) => {
+      if (initializedOfficialMedia.has(tabId)) return
+      initializedOfficialMedia.add(tabId)
+      const tab = officialMediaTabs.find((candidate) => candidate.id === tabId)
+      const panel = panels.get(tabId)
+      if (!tab || !panel || tab.items.length === 0) return
+      if (tab.kind === 'photos') {
+        const dispose = renderPhotoGallery(panel, [...tab.items])
+        signal.addEventListener('abort', dispose, { once: true })
+      } else {
+        const list = document.createElement('ul')
+        list.className = 'schedule-official-links'
+        tab.items.forEach((value, index) => {
+          let url: URL
+          try {
+            url = new URL(value)
+          } catch {
+            return
+          }
+          if (url.protocol !== 'https:' || !['instagram.com', 'www.instagram.com'].includes(url.hostname)) return
+          const item = document.createElement('li')
+          const link = document.createElement('a')
+          link.href = url.href
+          link.target = '_blank'
+          link.rel = 'noopener noreferrer'
+          link.textContent = `공식 Instagram 릴스 ${index + 1} 보기`
+          item.append(link)
+          list.append(item)
+        })
+        if (list.childElementCount > 0) panel.append(list)
+        else {
+          const empty = document.createElement('p')
+          empty.className = 'schedule-tab-empty'
+          empty.textContent = '표시할 수 있는 공식 릴스 링크가 없습니다.'
+          panel.append(empty)
+        }
       }
     }
 
@@ -194,6 +250,7 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
       })
       if (tabs[activeIndex].id === 'photos') initializePhotos()
       if (tabs[activeIndex].id === 'videos') initializeVideos()
+      if (tabs[activeIndex].id.startsWith('official-')) initializeOfficialMedia(tabs[activeIndex].id)
       if (moveFocus) tabButtons.get(tabs[activeIndex].id)!.focus()
     }
 

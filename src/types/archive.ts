@@ -17,6 +17,9 @@ export type ScheduleMedia = {
   photos?: string[]
   youtube?: string[]
   xPosts?: string[]
+  officialGroupPhotos?: string[]
+  officialIndividualPhotos?: string[]
+  officialReels?: string[]
 }
 
 export type EventFormat = 'in-person' | 'online' | 'hybrid' | 'unknown'
