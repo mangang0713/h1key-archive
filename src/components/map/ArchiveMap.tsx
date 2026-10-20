@@ -230,6 +230,7 @@ function ArchiveMap() {
       setLocationlessOpen(false)
       setLocationlessSelected(undefined)
       setRegionNavigationOpen(false)
+      setArchiveDataOpen(false)
       cameraRequest++
       if (selectedLocationId !== location.id) {
         map.stop()
