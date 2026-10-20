@@ -10,6 +10,8 @@ const JOURNEY_MIN_ZOOM = 7.5
 const JOURNEY_MAX_ZOOM = 13
 const JOURNEY_START_DATE = '2026-02-21'
 
+export type TimeTravelSpeed = 0.5 | 1 | 2 | 4
+
 const todayInKorea = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'Asia/Seoul',
   year: 'numeric',
@@ -39,6 +41,7 @@ export type TimeTravelController = {
 type TimeTravelControllerOptions = {
   map: MapLibreMap
   duration: () => number
+  playbackSpeed: () => TimeTravelSpeed
   invalidateOtherCameraTransitions: () => void
   discardSelection: () => void
   clearVisibleLocationMarkers: () => void
@@ -55,6 +58,7 @@ type TimeTravelControllerOptions = {
 export function createTimeTravelController({
   map,
   duration,
+  playbackSpeed,
   invalidateOtherCameraTransitions,
   discardSelection,
   clearVisibleLocationMarkers,
@@ -228,7 +232,7 @@ export function createTimeTravelController({
     }
     const motionDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       ? 0
-      : JOURNEY_CAMERA_DURATION
+      : JOURNEY_CAMERA_DURATION / playbackSpeed()
     const targetZoom = zoomForDistance(fromCoordinates, targetCoordinates)
     const finishArrival = () => {
       journeyLocationMarker?.setLngLat(targetCoordinates)

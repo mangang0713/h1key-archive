@@ -502,6 +502,45 @@
   line-height: 1.4;
 }
 
+.time-travel-speed {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 2px 8px;
+}
+
+.time-travel-speed span {
+  margin-right: auto;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.time-travel-speed button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 8%);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.time-travel-speed button[aria-pressed='true'] {
+  border-color: #5eead4;
+  background: rgb(13 148 136 / 35%);
+  color: #ccfbf1;
+}
+
+.time-travel-speed button:focus-visible {
+  outline: 3px solid #fbbf24;
+  outline-offset: 2px;
+}
+
 .time-travel-controls button:disabled {
   opacity: 0.45;
   cursor: not-allowed;

@@ -23,6 +23,7 @@ import {
   createTimeTravelController,
   JOURNEY_STOP_DELAY_MS,
   timeTravelSchedules,
+  type TimeTravelSpeed,
   type TimeTravelController,
 } from './timeTravelController'
 import { createRegionNavigationController } from './regionNavigationController'
@@ -56,6 +57,9 @@ function ArchiveMap() {
   const [timeTravelMoving, setTimeTravelMoving] = useState(false)
   const [timeTravelPausedOnRoute, setTimeTravelPausedOnRoute] = useState(false)
   const [timeTravelIndex, setTimeTravelIndex] = useState<number | null>(null)
+  const [timeTravelSpeed, setTimeTravelSpeed] = useState<TimeTravelSpeed>(2)
+  const timeTravelSpeedRef = useRef<TimeTravelSpeed>(2)
+  const selectedTimeTravelSpeedRef = useRef<TimeTravelSpeed>(2)
   const currentTimeTravelIndex = timeTravelIndex ?? 0
   const [currentRegionCode, setCurrentRegionCode] = useState<CountryCode>('KR')
   const otherRegions = archiveRegions.filter((region) => region.countryCode !== currentRegionCode)
@@ -69,6 +73,7 @@ function ArchiveMap() {
 
   useEffect(() => {
     if (!timeTravelOpen || !activeTimeTravelSchedule) return
+    timeTravelSpeedRef.current = selectedTimeTravelSpeedRef.current
     timeTravelControllerRef.current?.focus(activeTimeTravelSchedule)
   }, [activeTimeTravelSchedule, timeTravelOpen])
 
@@ -77,7 +82,7 @@ function ArchiveMap() {
     const timer = window.setTimeout(() => {
       if (timeTravelIndex >= timeTravelSchedules.length - 1) setTimeTravelPlaying(false)
       else setTimeTravelIndex(timeTravelIndex + 1)
-    }, JOURNEY_STOP_DELAY_MS)
+    }, JOURNEY_STOP_DELAY_MS / timeTravelSpeedRef.current)
     return () => window.clearTimeout(timer)
   }, [timeTravelIndex, timeTravelMoving, timeTravelOpen, timeTravelPausedOnRoute, timeTravelPlaying])
 
@@ -133,6 +138,7 @@ function ArchiveMap() {
     const timeTravelController = createTimeTravelController({
       map,
       duration,
+      playbackSpeed: () => timeTravelSpeedRef.current,
       invalidateOtherCameraTransitions: () => {
         cameraRequest++
       },
@@ -405,6 +411,11 @@ function ArchiveMap() {
           playing={timeTravelPlaying}
           moving={timeTravelMoving}
           pausedOnRoute={timeTravelPausedOnRoute}
+          speed={timeTravelSpeed}
+          onSpeedChange={(speed) => {
+            selectedTimeTravelSpeedRef.current = speed
+            setTimeTravelSpeed(speed)
+          }}
           onClose={() => {
             timeTravelControllerRef.current?.stop(true)
             timeTravelButtonRef.current?.focus()
@@ -452,7 +463,7 @@ function ArchiveMap() {
                 <span className="archive-explorer-icon archive-explorer-icon-time" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2M4 5v5h5" /></svg>
                 </span>
-                <span className="archive-explorer-label">시간순으로 보기</span>
+                <span className="archive-explorer-label">활동 여정 보기</span>
                 <span className="archive-explorer-count">{timeTravelSchedules.length}건</span>
               </button>
             )}
