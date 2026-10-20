@@ -6,7 +6,7 @@ Supabase 프로젝트와 X·Google·Kakao OAuth는 연결되어 있습니다. �
 
 1. 연결된 Supabase 프로젝트의 `Project URL`과 publishable key를 로컬 `.env`에 넣습니다. `.env.example`을 복사해 시작할 수 있습니다. publishable key는 브라우저에 노출되는 용도이며, `service_role` 키는 절대 `.env`의 `VITE_` 변수나 프런트엔드에 넣지 않습니다.
 2. Supabase SQL Editor 또는 Supabase CLI를 사용해 `migrations/202610190001_community_foundation.sql`, `migrations/202610200001_profile_onboarding.sql`, `migrations/202610200002_hessxl_admin.sql` 순서대로 적용합니다. 첫 마이그레이션은 커뮤니티 테이블과 읽기 API를 만들고, 두 번째는 기존 로그인 계정 프로필 보완과 공개 표시 이름 저장을, 세 번째는 `hessxl_` X 계정만 관리자로 판정하도록 설정합니다. 세 마이그레이션은 원격 프로젝트에 적용된 상태입니다.
-3. Supabase Auth의 사이트 URL과 Redirect URLs에 `http://localhost:5173/`, `http://127.0.0.1:5173/`, `https://mangang0713.github.io/h1key-archive/`를 등록합니다.
+3. Supabase Auth의 사이트 URL과 Redirect URLs에 `http://localhost:5173/`, `http://127.0.0.1:5173/`, `https://mangang0713.github.io/happy-riina-day/`를 등록합니다.
 4. X OAuth 2.0, Google, Kakao 제공자 자격 증명을 Supabase Auth에 설정합니다. X는 로그인에만 사용하며 X 게시물을 자동 수집하지 않습니다. OAuth 제공자가 요구하는 공개 개인정보 안내와 이용약관 URL은 정책 문서를 최종 검토한 뒤 등록합니다.
 5. Cloudflare Turnstile 사이트 키는 공개 값이므로 로컬 `.env.local`과 GitHub Actions 저장소 변수 `VITE_TURNSTILE_SITE_KEY`에 둡니다. 비밀 키 `TURNSTILE_SECRET_KEY`는 Supabase Edge Function secret으로만 보관합니다.
 6. `community-api` Edge Function을 배포하고 다음 설정을 확인합니다: Supabase가 제공하는 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, 직접 등록한 `TURNSTILE_SECRET_KEY`, `ALLOWED_ORIGINS`. 현재 `ALLOWED_ORIGINS`는 로컬 주소, GitHub Pages, 임시 테스트 사이트 주소를 쉼표로 구분해 포함합니다. 서비스 역할 키는 Edge Function 비밀 설정에만 둡니다.

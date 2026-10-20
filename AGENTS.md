@@ -60,5 +60,5 @@
 - Notion은 문제, 대안, 결정 이유, 리스크, 구현 상태, 사용자 테스트와 관련 커밋을 기록한다. 기존 관련 목차를 활용하고 중복 기록과 덮어쓰기를 피한다.
 - Notion 접근을 실제 확인하고 연결되지 않으면 알린다. 읽지 않은 내용을 읽었다고 하지 않는다.
 - 프로젝트 문서: https://app.notion.com/p/3f363210aaee8112b77ff3c3d9624096
-- 저장소: https://github.com/mangang0713/h1key-archive
+- 저장소: https://github.com/mangang0713/happy-riina-day
 - 장기 운영 규칙은 이 파일, 현재 기능은 README, 상세 의사결정은 Notion에 관리한다. 오래될 최신 커밋·진행 상태는 이 파일에 고정하지 않는다.
