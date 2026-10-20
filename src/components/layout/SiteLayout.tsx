@@ -45,7 +45,7 @@ function SiteLayout() {
     <div className="site-shell">
       <header className="site-header">
         <Link className="site-brand" to="/" aria-label="H1-KEY Activity Archive 홈">
-          <span className="site-brand-mark" aria-hidden="true">H</span>
+          <img className="site-brand-mark" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" aria-hidden="true" />
           <span>H1-KEY <b>ARCHIVE</b></span>
         </Link>
         <nav className="site-navigation" aria-label="주요 메뉴">

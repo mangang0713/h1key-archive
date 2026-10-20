@@ -178,16 +178,16 @@ function GuestbookPage() {
   return (
     <section className="community-page">
       <div className="community-heading">
-        <span className="community-eyebrow">HAPPY H1-KEY DAY</span>
-        <h1>축하와 응원의 글</h1>
-        <p>기억하고 싶은 축하와 응원을 남겨 주세요. 글과 사진은 공개됩니다.</p>
+        <span className="community-eyebrow">HAPPY RIINA DAY</span>
+        <h1>리이나에게 전하는 축하</h1>
+        <p>리이나의 생일을 함께 축하해 주세요. 글과 사진은 공개됩니다.</p>
       </div>
       {!configured && <div className="community-alert">방명록은 Supabase 연결 설정 후 열립니다. 현재 지도 아카이브는 그대로 이용할 수 있습니다.</div>}
       {configured && !user && <div className="community-alert">글을 남기려면 먼저 <Link to="/account?returnTo=/guestbook">로그인</Link>해 주세요. 기존 글은 로그인 없이 볼 수 있습니다.</div>}
       {configured && user && (
         <form className="community-form guestbook-form" onSubmit={(event) => void submitPost(event)}>
           <label htmlFor="guestbook-body">축하 글</label>
-          <textarea id="guestbook-body" value={body} maxLength={1200} rows={4} placeholder="H1-KEY에게 전하고 싶은 마음을 적어 주세요." onChange={(event) => setBody(event.target.value)} />
+          <textarea id="guestbook-body" value={body} maxLength={1200} rows={4} placeholder="리이나에게 전하고 싶은 마음을 적어 주세요." onChange={(event) => setBody(event.target.value)} />
           <div className="form-footer">
             <label className="file-picker" htmlFor="guestbook-images">사진 추가 (최대 3장)</label>
             <input id="guestbook-images" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => {

@@ -37,7 +37,7 @@
 }
 
 .site-brand b { color: #6d28d9; }
-.site-brand-mark { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9px; background: #6d28d9; color: #fff; }
+.site-brand-mark { display: block; width: 28px; height: 28px; flex: none; }
 .site-navigation { display: flex; align-items: center; gap: 6px; }
 .site-navigation a,
 .site-account-link, .site-logout-button { min-height: 40px; display: inline-flex; align-items: center; padding: 0 13px; border: 0; border-radius: 10px; color: #5b6071; font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
@@ -58,7 +58,7 @@
 @media (max-width: 600px) {
   .site-header { grid-template-columns: 1fr auto auto; gap: 6px; min-height: 54px; padding-right: max(10px, env(safe-area-inset-right, 0px)); }
   .site-brand { gap: 6px; font-size: 11px; letter-spacing: .02em; }
-  .site-brand-mark { width: 24px; height: 24px; border-radius: 7px; }
+  .site-brand-mark { width: 24px; height: 24px; }
   .site-navigation { gap: 0; }
   .site-navigation a, .site-account-link, .site-logout-button { min-height: 40px; padding: 0 8px; font-size: 12px; }
 }
