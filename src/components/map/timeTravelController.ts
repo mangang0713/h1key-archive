@@ -76,8 +76,6 @@ export function createTimeTravelController({
   let cameraRequest = 0
   let journeyTileWaitTimeout: number | undefined
   let journeyIdleHandler: (() => void) | undefined
-  const visitedScheduleMarkers = new Map<string, Marker>()
-
   const cancelJourneyTileWait = () => {
     if (journeyTileWaitTimeout !== undefined) {
       window.clearTimeout(journeyTileWaitTimeout)
@@ -89,33 +87,12 @@ export function createTimeTravelController({
     }
   }
 
-  const clearJourneyMarkers = () => {
-    visitedScheduleMarkers.forEach((marker) => marker.remove())
-    visitedScheduleMarkers.clear()
-  }
-
-  const revealScheduleMarker = (schedule: Schedule, coordinates: [number, number]) => {
-    if (disposed || !timeTravelCamera || visitedScheduleMarkers.has(schedule.id)) return
-    const eventMarker = document.createElement('div')
-    eventMarker.className = 'journey-visited-marker'
-    eventMarker.setAttribute('aria-hidden', 'true')
-    eventMarker.title = `${schedule.date} ${schedule.title}`
-    const markerLabel = document.createElement('span')
-    markerLabel.textContent = String(visitedScheduleMarkers.size + 1)
-    eventMarker.append(markerLabel)
-    const marker = new Marker({ element: eventMarker, anchor: 'bottom' })
-      .setLngLat(coordinates)
-      .addTo(map)
-    visitedScheduleMarkers.set(schedule.id, marker)
-  }
-
   const clearJourneyLocation = () => {
     highlightLocation(undefined)
     activeLocationId = undefined
     journeyLocationMarker?.remove()
     journeyLocationMarker = undefined
     lastJourneyCoordinates = undefined
-    clearJourneyMarkers()
     map.triggerRepaint()
   }
 
@@ -185,7 +162,6 @@ export function createTimeTravelController({
       pitch: map.getPitch(),
     }
     clearVisibleLocationMarkers()
-    clearJourneyMarkers()
     map.triggerRepaint()
     onStart()
     setIndex(0)
@@ -259,7 +235,6 @@ export function createTimeTravelController({
       const finishTileWait = () => {
         cancelJourneyTileWait()
         if (disposed || request !== cameraRequest) return
-        revealScheduleMarker(schedule, targetCoordinates)
         setMoving(false)
       }
       setMoving(true)
@@ -321,7 +296,6 @@ export function createTimeTravelController({
       journeyAnimationFrame = undefined
       journeyLocationMarker?.remove()
       journeyLocationMarker = undefined
-      clearJourneyMarkers()
       highlightLocation(undefined)
       activeLocationId = undefined
     },
