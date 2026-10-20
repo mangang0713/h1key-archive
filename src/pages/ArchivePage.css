@@ -4,5 +4,6 @@
   height: 100%;
 }
 
+.site-shell:has(.archive-page) { height: 100dvh; }
 .site-main:has(.archive-page) { display: flex; flex-direction: column; }
 .archive-page, .archive-page .archive-map, .archive-page .map-container { min-height: 0; height: 100%; }
