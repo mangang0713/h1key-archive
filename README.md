@@ -77,20 +77,24 @@ src/
 │  ├─ GuestbookPage.tsx          # 축하 방명록
 │  ├─ SchedulePage.tsx           # 일정 좋아요·후기·사진
 │  ├─ AccountPage.tsx             # 소셜 로그인·프로필·탈퇴
-│  ├─ AdminReportsPage.tsx        # 신고 검토
+│  ├─ AdminReportsPage.tsx        # 신고 검토와 숨김 게시물 복원
 │  └─ AdminSettingsPage.tsx       # 사용자 기능·사진 중단 스위치
 ├─ components/
 │  ├─ layout/                     # 공유 상단 메뉴와 페이지 틀
 │  ├─ map/
-│  │  ├─ ArchiveMap.tsx                  # 지도 생명주기와 지도 기능 연결
+│  │  ├─ ArchiveMap.tsx                  # 지도 생명주기·카메라·기능 조율
+│  │  ├─ ArchiveMap.css                  # 지도 컨테이너·마커·처음으로 버튼 스타일
+│  │  ├─ ArchiveExplorerControls.tsx     # 지도 탐색 버튼과 지역·영상통화·전체 기록 패널 연결
+│  │  ├─ ArchiveExplorerControls.css    # 지도 탐색 컨트롤 스타일
 │  │  ├─ TimeTravelPanel.tsx             # 시간순 탐방 조작 UI
+│  │  ├─ TimeTravelPanel.css              # 시간순 탐방 UI 스타일
 │  │  ├─ RegionNavigationPanel.tsx       # 지역 선택 UI
 │  │  ├─ createLocationMarkerElement.ts  # 클러스터·장소 마커 UI 생성
 │  │  ├─ timeTravelController.ts        # 시간순 이동과 도착 마커
 │  │  ├─ regionNavigationController.ts  # 지역 간 카메라 이동
-│  │  ├─ ArchiveMap.css                  # 지도 관련 스타일
 │  │  ├─ archiveMapData.ts               # 지도에 필요한 장소·일정 데이터 계산
-│  │  └─ SchedulePopupContent.ts        # 장소 스케줄 Popup 목록 및 상세
+│  │  ├─ SchedulePopupContent.ts         # 장소 스케줄 Popup 목록 및 상세 콘텐츠
+│  │  └─ SchedulePopupContent.css        # 장소 스케줄 Popup 스타일
 │  ├─ schedule/
 │     ├─ LocationlessSchedulePanel.tsx # 장소 없는 일정의 목록 및 상세 UI
 │     └─ LocationlessSchedulePanel.css # 해당 패널 스타일
@@ -115,6 +119,8 @@ supabase/
 ```
 
 GitHub Pages의 저장소 하위 경로와 새로고침을 지원하도록 `HashRouter`를 사용합니다. 지도는 첫 페이지이자 메인 탐색 화면으로 유지하고, 커뮤니티 페이지 코드는 방문할 때 불러오도록 나눴습니다.
+
+지도 생명주기와 카메라 흐름은 `ArchiveMap.tsx`에서 조율하고, 탐색 메뉴 UI는 `ArchiveExplorerControls.tsx`, 시간순 탐방 동작은 `timeTravelController.ts`, 장소 이동은 `regionNavigationController.ts`가 맡습니다. Popup 콘텐츠와 탐색 UI의 스타일은 각각 해당 컴포넌트 파일 옆에 둡니다. `schedules.ts`, `locations.ts`, `schedulePhotos.ts`는 길지만 각각 원본 데이터 목록이라 한 파일에서 계속 편집할 수 있도록 유지합니다.
 
 장소와 스케줄은 **1:N 관계**로 관리하며, 세트리스트에는 곡 제목 대신 곡 ID를 저장합니다.
 

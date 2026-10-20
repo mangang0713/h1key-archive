@@ -3,6 +3,7 @@ import type { Location, Schedule } from '../../types/archive'
 import { renderPhotoGallery } from '../media/photoGallery'
 import { preloadXWidgets, renderXPostEmbeds } from '../media/xPostEmbeds'
 import '../media/XPostEmbeds.css'
+import './SchedulePopupContent.css'
 
 const songsById = new Map(songs.map((song) => [song.id, song]))
 

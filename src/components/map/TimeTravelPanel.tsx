@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { Schedule } from '../../types/archive'
 import type { TimeTravelSpeed } from './timeTravelController'
+import './TimeTravelPanel.css'
 
 const TIME_TRAVEL_SPEEDS: TimeTravelSpeed[] = [0.5, 1, 2, 4]
 
