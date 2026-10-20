@@ -1,7 +1,7 @@
 import { songs } from '../../data/songs'
 import type { Location, Schedule } from '../../types/archive'
 import { renderPhotoGallery } from '../media/photoGallery'
-import { renderXPostEmbeds } from '../media/xPostEmbeds'
+import { preloadXWidgets, renderXPostEmbeds } from '../media/xPostEmbeds'
 import '../media/XPostEmbeds.css'
 
 const songsById = new Map(songs.map((song) => [song.id, song]))
@@ -65,6 +65,8 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
   let focusTarget: HTMLElement = heading
 
   if (selected) {
+    if (selected.media?.xPosts?.length) preloadXWidgets()
+
     const tablist = document.createElement('div')
     tablist.className = 'schedule-tabs'
     tablist.setAttribute('role', 'tablist')

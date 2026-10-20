@@ -7,6 +7,31 @@
   margin: 0 0 8px;
 }
 
+.x-post-embed-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.x-post-loading-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin: 0 0 8px;
+  border: 2px solid #cbd5e1;
+  border-top-color: #6d28d9;
+  border-radius: 50%;
+  animation: x-embed-spinner 800ms linear infinite;
+}
+
+@keyframes x-embed-spinner {
+  to { transform: rotate(360deg); }
+}
+
 .x-post-embeds blockquote {
   max-width: 100%;
   margin: 8px 0;
@@ -14,4 +39,10 @@
 
 .x-post-embeds iframe {
   max-width: 100% !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .x-post-loading-indicator {
+    animation: none;
+  }
 }
