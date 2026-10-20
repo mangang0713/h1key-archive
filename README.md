@@ -161,7 +161,7 @@ CSV 가져오기는 확인 완료된 새 장소를 `locations.ts`에 추가하�
 
 지도는 첫 화면이자 아카이브의 중심입니다. 여기에 방명록, 일정 좋아요·후기, 계정, 신고 검토, 운영 설정 페이지를 더해 이후 기능을 별도 화면으로 확장할 수 있는 구조를 마련했습니다.
 
-Supabase 프로젝트와 X·Google·Kakao 소셜 로그인을 연결했고, 첫 로그인 공개 이름 설정과 `hessxl_` 전용 운영 권한 흐름을 코드에 추가했습니다. 다만 **현재 원격 Supabase DB에는 공개 테이블이 아직 없고 마이그레이션과 `community-api` Edge Function도 배포되지 않아 프로필 저장·방명록 등 커뮤니티 기능은 아직 동작하지 않습니다.** Cloudflare Turnstile도 실제 키 설정과 검증이 남아 있습니다. 이 설정 전에도 지도와 정적 일정 데이터는 계속 작동합니다.
+Supabase 프로젝트에 DB 마이그레이션과 `community-api` Edge Function을 적용했고, Cloudflare Turnstile도 연결했습니다. GitHub Pages 빌드는 저장소 Actions 변수 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY`를 사용합니다. URL, publishable key, Turnstile site key는 브라우저에서 사용되는 공개 설정값이며, service-role key와 Turnstile secret key는 서버에만 둡니다. 2026-10-21에는 공개 배포본에서 방명록 조회와 게시된 글 표시를 확인했습니다. 배포본의 로그인·작성·수정·삭제·신고와 관리자 권한은 출시 전 다시 점검해야 합니다. 설정이나 커뮤니티 기능에 문제가 있어도 지도와 정적 일정 데이터는 계속 작동합니다.
 
 장소·일정·곡은 스프레드시트에서 검토하고 TypeScript 정적 데이터로 빌드합니다. 계정과 사용자 콘텐츠만 Supabase에 저장해 공개 일정 조회가 데이터베이스 사용량을 늘리지 않도록 했습니다. 사용자 사진은 비공개 Storage를 사용하며, 계정당 총 10장·10MB, 글당 3장, 파일당 1MB, 전체 800MB 한도를 서버에서 확인하도록 설계했습니다. 글 작성 전 개인정보 안내와 공개 동의를 받습니다.
 
@@ -191,7 +191,8 @@ Supabase 프로젝트와 X·Google·Kakao 소셜 로그인을 연결했고, 첫 
 - [x] X 게시물 사진 미리보기와 영상 임베드를 일정에 연결
 - [ ] 남은 게시물과 일정의 연결 여부 검토
 - [x] Supabase 프로젝트와 X·Google·Kakao OAuth 연결
-- [ ] Supabase DB 마이그레이션 적용, `community-api` Edge Function 배포, Turnstile 연결 및 공개 전 권한·요금 QA
+- [x] Supabase DB 마이그레이션 적용, `community-api` Edge Function 배포, Turnstile 연결
+- [ ] 공개 배포본의 로그인·작성·수정·삭제·신고·관리 권한과 무료 사용량 운영 QA
 - [ ] 공식 스케줄 자동 수집의 안정성 확인 (안정적이지 않으면 CSV 가져오기 유지)
 - [ ] 특별 무대 판정 및 표시
 - [ ] 첫 방문 활동 기록 인트로 (별도 기획 후)

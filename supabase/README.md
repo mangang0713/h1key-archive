@@ -1,10 +1,10 @@
 # Supabase 커뮤니티 기능 설정
 
-Supabase 프로젝트와 X·Google·Kakao OAuth는 연결되어 있습니다. 커뮤니티 DB 마이그레이션과 Turnstile 위젯 설정은 적용됐지만, `community-api` Edge Function 배포와 프런트 빌드 Site Key 연결이 완료되기 전까지 커뮤니티 쓰기 기능은 완전히 동작하지 않습니다. 지도와 정적 일정은 계속 동작합니다. 이 문서는 DB와 서버 기능의 배포·운영 절차를 정리합니다.
+Supabase 프로젝트의 커뮤니티 DB 마이그레이션과 `community-api` Edge Function을 적용했고, Turnstile도 연결했습니다. GitHub Pages 빌드에는 GitHub 저장소의 Actions 변수로 Supabase와 Turnstile 공개 설정을 전달합니다. 2026-10-21 공개 배포본에서 방명록 공개 조회를 확인했으며, 배포 환경의 로그인과 글 작성 등 전체 커뮤니티 흐름은 출시 전에 다시 점검해야 합니다. 설정이나 커뮤니티 기능에 문제가 있어도 지도와 정적 일정은 계속 동작합니다. 이 문서는 DB와 서버 기능의 배포·운영 절차를 정리합니다.
 
 ## 배포 전 준비
 
-1. 연결된 Supabase 프로젝트의 `Project URL`과 publishable key를 로컬 `.env`에 넣습니다. `.env.example`을 복사해 시작할 수 있습니다. publishable key는 브라우저에 노출되는 용도이며, `service_role` 키는 절대 `.env`의 `VITE_` 변수나 프런트엔드에 넣지 않습니다.
+1. 로컬 개발에서는 연결된 Supabase 프로젝트의 URL과 publishable key를 `.env.local`에 넣습니다. `.env.example`을 참고해 시작할 수 있습니다. GitHub Pages 배포에는 저장소 **Settings → Secrets and variables → Actions → Variables**에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY`를 등록합니다. 배포 workflow가 이 변수들을 빌드에 전달합니다. URL, publishable key, Turnstile site key는 브라우저에서 사용되는 공개 설정값입니다. `service_role` 키와 `TURNSTILE_SECRET_KEY`는 절대 `VITE_` 변수나 브라우저 번들에 넣지 말고 서버 secret으로만 보관합니다.
 2. Supabase SQL Editor 또는 Supabase CLI를 사용해 `migrations/202610190001_community_foundation.sql`, `migrations/202610200001_profile_onboarding.sql`, `migrations/202610200002_hessxl_admin.sql` 순서대로 적용합니다. 첫 마이그레이션은 커뮤니티 테이블과 읽기 API를 만들고, 두 번째는 기존 로그인 계정 프로필 보완과 공개 표시 이름 저장을, 세 번째는 `hessxl_` X 계정만 관리자로 판정하도록 설정합니다. 세 마이그레이션은 원격 프로젝트에 적용된 상태입니다.
 3. Supabase Auth의 사이트 URL과 Redirect URLs에 `http://localhost:5173/`, `http://127.0.0.1:5173/`, `https://mangang0713.github.io/happy-riina-day/`를 등록합니다.
 4. X OAuth 2.0, Google, Kakao 제공자 자격 증명을 Supabase Auth에 설정합니다. X는 로그인에만 사용하며 X 게시물을 자동 수집하지 않습니다. OAuth 제공자가 요구하는 공개 개인정보 안내와 이용약관 URL은 정책 문서를 최종 검토한 뒤 등록합니다.
