@@ -11,7 +11,7 @@ Supabase 프로젝트와 X·Google·Kakao OAuth는 연결되어 있습니다. �
 5. Cloudflare Turnstile 사이트 키는 공개 값이므로 로컬 `.env.local`과 GitHub Actions 저장소 변수 `VITE_TURNSTILE_SITE_KEY`에 둡니다. 비밀 키 `TURNSTILE_SECRET_KEY`는 Supabase Edge Function secret으로만 보관합니다.
 6. `community-api` Edge Function을 배포하고 다음 설정을 확인합니다: Supabase가 제공하는 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, 직접 등록한 `TURNSTILE_SECRET_KEY`, `ALLOWED_ORIGINS`. 현재 `ALLOWED_ORIGINS`는 로컬 주소, GitHub Pages, 임시 테스트 사이트 주소를 쉼표로 구분해 포함합니다. 서비스 역할 키는 Edge Function 비밀 설정에만 둡니다.
 7. 운영 메뉴는 X 로그인 계정 `hessxl_`에만 표시됩니다. 세 번째 마이그레이션의 서버 함수가 X OAuth identity의 사용자명을 확인해 해당 계정만 `admin_members`에 등록합니다. 화면에서 이름을 흉내 내거나 프로필 표시 이름을 바꾸는 것만으로 관리자 권한을 얻을 수 없습니다.
-8. 로그인, 작성·수정·삭제, 신고, 관리자 숨김·삭제, 사진 한도, 중단 스위치를 익명·일반 사용자·관리자로 각각 시험합니다. 개인정보 안내의 연락처, 운영 주체, 보유 기간을 정하고 초안 문구를 확정한 뒤에만 공개합니다.
+8. 로그인, 작성·수정·삭제, 신고, 관리자 숨김·삭제, 사진 한도, 중단 스위치를 익명·일반 사용자·관리자로 각각 시험합니다. 개인정보 안내에는 X 문의 계정 `@hessxl_`와 2027년 12월 31일 이후 서비스 데이터 폐기 예정일을 반영했습니다. 공개 전에 실제 처리 흐름과 정책이 일치하는지 최종 검토합니다.
 
 ## 한도와 운영
 
