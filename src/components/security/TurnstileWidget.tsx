@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 declare global {
   interface Window {
     turnstile?: {
-      render: (container: HTMLElement, options: { sitekey: string; callback: (token: string) => void; 'expired-callback': () => void; 'error-callback': () => void; theme: 'light' }) => string
+      render: (container: HTMLElement, options: { sitekey: string; callback: (token: string) => void; 'expired-callback': () => void; 'error-callback': () => void; theme: 'light'; appearance?: 'always' | 'execute' | 'interaction-only' }) => string
       remove: (widgetId: string) => void
     }
   }
@@ -30,7 +30,11 @@ function loadTurnstile() {
   return loader
 }
 
-function TurnstileWidget({ onToken, resetKey = 0 }: { onToken: (token: string) => void; resetKey?: number }) {
+function TurnstileWidget({ onToken, resetKey = 0, appearance = 'always' }: {
+  onToken: (token: string) => void
+  resetKey?: number
+  appearance?: 'always' | 'execute' | 'interaction-only'
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState('')
 
@@ -48,6 +52,7 @@ function TurnstileWidget({ onToken, resetKey = 0 }: { onToken: (token: string) =
         callback: onToken,
         'expired-callback': () => onToken(''),
         'error-callback': () => { onToken(''); setError('봇 확인을 다시 진행해 주세요.') },
+        appearance,
       })
     }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : '봇 확인을 불러오지 못했습니다.'))
     return () => {
@@ -55,7 +60,7 @@ function TurnstileWidget({ onToken, resetKey = 0 }: { onToken: (token: string) =
       if (widgetId) window.turnstile?.remove(widgetId)
       onToken('')
     }
-  }, [onToken, resetKey])
+  }, [appearance, onToken, resetKey])
 
   if (!siteKey) return <p className="community-small">Turnstile 사이트 키가 설정되면 봇 확인이 표시됩니다.</p>
   return <div><div ref={containerRef} />{error && <p className="community-message" role="alert">{error}</p>}</div>

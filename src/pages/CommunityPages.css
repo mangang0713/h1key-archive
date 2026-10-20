@@ -109,6 +109,11 @@
 .community-form .consent-field input { box-sizing: border-box; width: 18px; height: 18px; flex: 0 0 18px; margin: 2px 0 0; padding: 0; accent-color: #6d28d9; }
 .consent-field span { min-width: 0; flex: 1; }
 .consent-field a { color: #5b21b6; }
+.consent-error { display: flex; align-items: flex-start; gap: 8px; margin: -4px 0 2px; padding: 10px 12px; border: 1px solid #f0cbd5; border-radius: 10px; background: #fff7fa; color: #8e2946; font-size: 13px; line-height: 1.5; }
+.consent-error::before { content: '!'; display: grid; width: 18px; height: 18px; flex: 0 0 18px; place-items: center; border-radius: 50%; background: #f8e4eb; color: #8e2946; font-size: 12px; font-weight: 800; }
+.guestbook-form .form-footer > .primary-button { box-sizing: border-box; width: 112px; max-width: 100%; flex: 0 0 112px; margin-left: auto; }
+.guestbook-form .form-footer > span { flex: 0 0 100%; }
+.guestbook-turnstile { margin: 0; }
 .storage-progress { display: block; width: 100%; height: 12px; accent-color: #6d28d9; }
 
 @media (max-width: 600px) {

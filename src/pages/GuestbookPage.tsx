@@ -34,6 +34,8 @@ function GuestbookPage() {
   const [turnstileToken, setTurnstileToken] = useState('')
   const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const [consentError, setConsentError] = useState('')
+  const consentCheckboxRef = useRef<HTMLInputElement>(null)
 
   const loadPosts = useCallback(async (nextPage = 0, append = false) => {
     if (!configured) return
@@ -110,10 +112,15 @@ function GuestbookPage() {
     if (files.length > MAX_POST_IMAGES) { setMessage(`사진은 게시물당 최대 ${MAX_POST_IMAGES}장까지 선택할 수 있습니다.`); return }
     const invalidFile = files.find((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
     if (invalidFile) { setMessage('JPG, PNG, WebP 사진을 선택해 주세요. 1MB가 넘는 사진은 업로드 전에 자동으로 줄입니다.'); return }
+    if (!termsAccepted) {
+      setConsentError('글을 등록하려면 공개 안내를 확인하고 동의해 주세요.')
+      consentCheckboxRef.current?.focus()
+      return
+    }
+    setConsentError('')
     setBusy(true)
     setMessage('')
     try {
-      if (!termsAccepted) throw new Error('공개 안내를 확인하고 동의해 주세요.')
       await acceptCommunityTerms()
       await saveGuestbookPost(body.trim(), files, editingId, turnstileToken)
       setBody('')
@@ -185,29 +192,37 @@ function GuestbookPage() {
       {!configured && <div className="community-alert">방명록은 Supabase 연결 설정 후 열립니다. 현재 지도 아카이브는 그대로 이용할 수 있습니다.</div>}
       {configured && !user && <div className="community-alert">글을 남기려면 먼저 <Link to="/account?returnTo=/guestbook">로그인</Link>해 주세요. 기존 글은 로그인 없이 볼 수 있습니다.</div>}
       {configured && user && (
-        <form className="community-form guestbook-form" onSubmit={(event) => void submitPost(event)}>
-          <label htmlFor="guestbook-body">축하 글</label>
-          <textarea id="guestbook-body" value={body} maxLength={1200} rows={4} placeholder="리이나에게 전하고 싶은 마음을 적어 주세요." onChange={(event) => setBody(event.target.value)} />
-          <div className="form-footer">
-            <label className="file-picker" htmlFor="guestbook-images">사진 추가 (최대 3장)</label>
-            <input id="guestbook-images" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => {
-              addSelectedPhotos(Array.from(event.target.files ?? []))
-              event.target.value = ''
-            }} />
-            <span>{files.length}/{MAX_POST_IMAGES}장 선택 · {body.length}/1200자 · 계정당 사진 10장, 총 10MB까지</span>
+        <>
+          <form className="community-form guestbook-form" onSubmit={(event) => void submitPost(event)}>
+            <label htmlFor="guestbook-body">축하 글</label>
+            <textarea id="guestbook-body" value={body} maxLength={1200} rows={4} placeholder="리이나에게 전하고 싶은 마음을 적어 주세요." onChange={(event) => setBody(event.target.value)} />
+            <div className="form-footer">
+              <label className="file-picker" htmlFor="guestbook-images">사진 추가 (최대 3장)</label>
+              <input id="guestbook-images" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => {
+                addSelectedPhotos(Array.from(event.target.files ?? []))
+                event.target.value = ''
+              }} />
+              <button className="primary-button" disabled={busy}>{busy ? '등록 중…' : editingId ? '수정' : '등록'}</button>
+              <span>{files.length}/{MAX_POST_IMAGES}장 선택 · {body.length}/1200자 · 계정당 사진 10장, 총 10MB까지</span>
+            </div>
+            {photoPreviews.length > 0 && <div className="guestbook-photo-previews" aria-label="업로드할 사진 미리보기">
+              {photoPreviews.map(({ file, url }, index) => <figure key={`${file.name}-${file.lastModified}-${index}`}>
+                <img src={url} alt={`${file.name} 미리보기`} />
+                <figcaption>{file.name}</figcaption>
+                <button type="button" aria-label={`${file.name} 사진 제거`} onClick={() => replaceSelectedPhotos(files.filter((_, fileIndex) => fileIndex !== index))}>×</button>
+              </figure>)}
+            </div>}
+            <label className="consent-field"><input ref={consentCheckboxRef} type="checkbox" checked={termsAccepted} aria-invalid={consentError ? true : undefined} aria-describedby={consentError ? 'guestbook-consent-error' : undefined} onChange={(event) => {
+              setTermsAccepted(event.target.checked)
+              if (event.target.checked) setConsentError('')
+            }} /><span><Link to="/policy/privacy" target="_blank" rel="noreferrer">개인정보·공개 안내</Link>를 확인했고, 글과 선택한 사진이 공개되는 데 동의합니다.</span></label>
+            {consentError && <p className="consent-error" id="guestbook-consent-error" role="alert">{consentError}</p>}
+            {editingId && <button className="text-button" type="button" onClick={() => { setEditingId(undefined); setBody(''); replaceSelectedPhotos([]) }}>수정 취소</button>}
+          </form>
+          <div className="guestbook-turnstile" role="group" aria-label="Cloudflare 보안 확인">
+            <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileResetKey} appearance="interaction-only" />
           </div>
-          {photoPreviews.length > 0 && <div className="guestbook-photo-previews" aria-label="업로드할 사진 미리보기">
-            {photoPreviews.map(({ file, url }, index) => <figure key={`${file.name}-${file.lastModified}-${index}`}>
-              <img src={url} alt={`${file.name} 미리보기`} />
-              <figcaption>{file.name}</figcaption>
-              <button type="button" aria-label={`${file.name} 사진 제거`} onClick={() => replaceSelectedPhotos(files.filter((_, fileIndex) => fileIndex !== index))}>×</button>
-            </figure>)}
-          </div>}
-          <label className="consent-field"><input type="checkbox" required checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} /><span><Link to="/policy/privacy" target="_blank" rel="noreferrer">개인정보·공개 안내</Link>를 확인했고, 글과 선택한 사진이 공개되는 데 동의합니다.</span></label>
-          <div className="turnstile-field"><span>자동 등록 방지 확인</span><TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileResetKey} /></div>
-          <button className="primary-button" disabled={busy}>{busy ? '저장 중…' : editingId ? '수정 저장' : '축하 글 남기기'}</button>
-          {editingId && <button className="text-button" type="button" onClick={() => { setEditingId(undefined); setBody(''); replaceSelectedPhotos([]) }}>수정 취소</button>}
-        </form>
+        </>
       )}
       {message && <p className="community-message" role="status">{message}</p>}
       <div className="community-list-heading"><h2>남겨진 글</h2><span>{posts.length}개 표시</span></div>
