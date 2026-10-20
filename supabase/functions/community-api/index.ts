@@ -123,9 +123,9 @@ async function requireCommunityTerms(client: SupabaseClient, userId: string) {
 }
 
 async function isAdmin(client: SupabaseClient, userId: string) {
-  const { data, error } = await client.from('admin_members').select('user_id').eq('user_id', userId).maybeSingle()
+  const { data, error } = await client.rpc('is_archive_admin_user', { p_user_id: userId })
   if (error) throw new Error('관리자 권한을 확인하지 못했습니다.')
-  return Boolean(data)
+  return data === true
 }
 
 function text(value: unknown, max: number) {

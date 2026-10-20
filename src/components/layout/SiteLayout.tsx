@@ -2,6 +2,7 @@ import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-do
 import { useAuth } from '../../features/auth/AuthProvider'
 import { useEffect } from 'react'
 import { getProfile } from '../../features/community/api'
+import AdminNavigationLink from './AdminNavigationLink'
 import './SiteLayout.css'
 
 function SiteLayout() {
@@ -36,7 +37,7 @@ function SiteLayout() {
         </nav>
         <div className="site-account">
           {loading ? <span className="site-account-loading">확인 중</span> : user
-            ? <Link className="site-account-link" to="/account">내 계정</Link>
+            ? <><AdminNavigationLink /><Link className="site-account-link" to="/account">내 계정</Link></>
             : <Link className="site-account-link" to="/account">로그인</Link>}
         </div>
       </header>
