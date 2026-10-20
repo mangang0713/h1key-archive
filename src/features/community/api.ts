@@ -1,4 +1,4 @@
-import type { AdminCommunitySettings, CommunityMedia, CommunitySettings, ContentReport, GuestbookPost, ScheduleReview } from './types'
+import type { AdminCommunitySettings, CommunityMedia, CommunitySettings, ContentReport, GuestbookPost, HiddenCommunityContent, ScheduleReview } from './types'
 import { supabase, supabaseConfig } from '../../lib/supabase/client'
 
 const PAGE_SIZE = 12
@@ -152,6 +152,14 @@ export async function reportCommunityContent(contentType: 'guestbook' | 'review'
 
 export async function getAdminReports() {
   return invoke<ContentReport[]>('get-admin-reports')
+}
+
+export async function getAdminHiddenContent() {
+  return invoke<HiddenCommunityContent[]>('get-admin-hidden-content')
+}
+
+export async function restoreHiddenCommunityContent(contentType: 'guestbook' | 'review', contentId: string) {
+  return invoke('restore-hidden-content', { contentType, contentId })
 }
 
 export async function moderateReport(reportId: string, decision: 'dismiss' | 'hide' | 'delete') {

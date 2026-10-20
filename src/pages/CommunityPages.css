@@ -75,6 +75,15 @@
 .review-rating { color: #e49a22; letter-spacing: .08em; }
 .report-card { margin: 14px 0; }
 .report-card blockquote { margin: 12px 0; padding: 12px 14px; border-left: 3px solid #a78bfa; background: #f7f5fc; color: #555267; white-space: pre-wrap; }
+.admin-review-tabs { display: flex; gap: 8px; margin: 24px 0 18px; border-bottom: 1px solid #e5e7ef; }
+.admin-review-tab { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 0 13px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #666b7b; font: inherit; font-weight: 700; cursor: pointer; }
+.admin-review-tab span { display: grid; min-width: 22px; height: 22px; place-items: center; padding: 0 5px; border-radius: 99px; background: #f0edf7; color: #574a72; font-size: 11px; }
+.admin-review-tab.is-active { border-bottom-color: #6d28d9; color: #4c1d95; }
+.admin-review-tab:focus-visible { outline: 3px solid #9b7be0; outline-offset: 2px; }
+.admin-hidden-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
+.admin-hidden-photo-grid figure { position: relative; min-width: 0; margin: 0; }
+.admin-hidden-photo-grid img { display: block; width: 100%; aspect-ratio: 1; border-radius: 10px; background: #f1f1f5; object-fit: cover; }
+.admin-hidden-photo-grid .admin-photo-delete { min-height: 34px; }
 .post-report-action { display: grid; justify-items: start; }
 .report-error { margin: 4px 0; color: #a61b2b; font-size: 13px; line-height: 1.5; }
 .report-confirmation { width: min(460px, calc(100% - 32px)); max-height: min(80vh, 640px); padding: 0; overflow: auto; border: 1px solid #e5e1ef; border-radius: 18px; background: #fff; color: #25263a; box-shadow: 0 24px 80px rgb(20 18 35 / 24%); }

@@ -38,6 +38,17 @@ export type ContentReport = {
   target_author: string
 }
 
+export type HiddenCommunityContent = {
+  id: string
+  content_type: 'guestbook' | 'review'
+  schedule_id: string | null
+  author_name: string
+  body: string
+  rating: number | null
+  created_at: string
+  media: Array<Pick<CommunityMedia, 'id' | 'signed_url'>>
+}
+
 export type CommunitySettings = {
   community_enabled: boolean
   uploads_enabled: boolean

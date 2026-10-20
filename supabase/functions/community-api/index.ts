@@ -302,9 +302,51 @@ Deno.serve(async (request) => {
       if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 신고 목록을 볼 수 있습니다.')
       const { data, error } = await adminClient.from('content_reports')
         .select('id, content_type, content_id, reason, details, status, created_at, target_excerpt, target_author')
-        .order('created_at', { ascending: true }).limit(100)
+        .eq('status', 'open').order('created_at', { ascending: true }).limit(100)
       if (error) throw new Error('신고 목록을 불러오지 못했습니다.')
       return respond(data ?? [], 200, origin)
+    }
+    if (action === 'get-admin-hidden-content') {
+      await takeLimit(adminClient, userId, 'get-admin-hidden-content', 60, 3600)
+      if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 숨김 게시물을 볼 수 있습니다.')
+      const [guestbookResult, reviewResult] = await Promise.all([
+        adminClient.from('guestbook_posts').select('id, author_name, body, created_at').eq('status', 'hidden').order('created_at', { ascending: false }).limit(100),
+        adminClient.from('schedule_reviews').select('id, schedule_id, author_name, body, rating, created_at').eq('status', 'hidden').order('created_at', { ascending: false }).limit(100),
+      ])
+      if (guestbookResult.error || reviewResult.error) throw new Error('숨김 게시물을 불러오지 못했습니다.')
+      const hidden = [
+        ...(guestbookResult.data ?? []).map((item) => ({ ...item, content_type: 'guestbook' as const, schedule_id: null, rating: null, media: [] as unknown[] })),
+        ...(reviewResult.data ?? []).map((item) => ({ ...item, content_type: 'review' as const, media: [] as unknown[] })),
+      ].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 100)
+      const guestbookIds = hidden.filter((item) => item.content_type === 'guestbook').map((item) => item.id)
+      const reviewIds = hidden.filter((item) => item.content_type === 'review').map((item) => item.id)
+      const mediaRows = []
+      if (guestbookIds.length) {
+        const { data, error } = await adminClient.from('community_media').select('id, object_path, byte_size, content_type, guestbook_post_id').in('guestbook_post_id', guestbookIds)
+        if (error) throw new Error('숨김 게시물 사진 정보를 불러오지 못했습니다.')
+        mediaRows.push(...(data ?? []).map((item) => ({ ...item, parentId: item.guestbook_post_id })))
+      }
+      if (reviewIds.length) {
+        const { data, error } = await adminClient.from('community_media').select('id, object_path, byte_size, content_type, schedule_review_id').in('schedule_review_id', reviewIds)
+        if (error) throw new Error('숨김 게시물 사진 정보를 불러오지 못했습니다.')
+        mediaRows.push(...(data ?? []).map((item) => ({ ...item, parentId: item.schedule_review_id })))
+      }
+      await Promise.all(mediaRows.map(async (item) => {
+        const { data } = await adminClient.storage.from('community-images').createSignedUrl(item.object_path, 300)
+        const parent = hidden.find((post) => post.id === item.parentId)
+        if (parent && data?.signedUrl) parent.media.push({ id: item.id, byte_size: item.byte_size, content_type: item.content_type, signed_url: data.signedUrl })
+      }))
+      return respond(hidden, 200, origin)
+    }
+    if (action === 'restore-hidden-content') {
+      if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 숨김 게시물을 복원할 수 있습니다.')
+      const contentType = rawBody.contentType
+      if (contentType !== 'guestbook' && contentType !== 'review') throw new Error('복원할 게시물 종류가 올바르지 않습니다.')
+      const table = contentType === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
+      const { data, error } = await adminClient.from(table).update({ status: 'published', updated_at: new Date().toISOString() })
+        .eq('id', text(rawBody.contentId, 100)).eq('status', 'hidden').select('id').maybeSingle()
+      if (error || !data) throw new Error('숨김 게시물을 복원하지 못했습니다. 다시 목록을 불러와 확인해 주세요.')
+      return respond({ restored: true }, 200, origin)
     }
     if (action === 'update-admin-settings') {
       if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 운영 설정을 바꿀 수 있습니다.')
@@ -318,7 +360,7 @@ Deno.serve(async (request) => {
 
     const captchaActions = new Set(['create-guestbook', 'edit-guestbook', 'create-review', 'edit-review'])
     if (captchaActions.has(String(action))) await verifyTurnstile(request, rawBody.turnstileToken)
-    if (!['moderate-report', 'get-admin-settings', 'update-admin-settings', 'get-admin-reports', 'delete-content', 'delete-media', 'delete-account'].includes(String(action))) {
+    if (!['moderate-report', 'get-admin-settings', 'update-admin-settings', 'get-admin-reports', 'get-admin-hidden-content', 'restore-hidden-content', 'delete-content', 'delete-media', 'delete-account'].includes(String(action))) {
       await assertCommunityEnabled(adminClient)
     }
 
