@@ -1,14 +1,31 @@
 import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../features/auth/AuthProvider'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getProfile } from '../../features/community/api'
 import AdminNavigationLink from './AdminNavigationLink'
 import './SiteLayout.css'
 
 function SiteLayout() {
-  const { user, loading } = useAuth()
+  const { user, loading, signOut } = useAuth()
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState('')
   const location = useLocation()
   const navigate = useNavigate()
+
+  async function handleSignOut() {
+    if (signingOut) return
+    setSigningOut(true)
+    setSignOutError('')
+    try {
+      const error = await signOut()
+      if (error) setSignOutError(error)
+    } catch (error) {
+      setSignOutError(error instanceof Error ? error.message : '로그아웃하지 못했습니다.')
+    } finally {
+      setSigningOut(false)
+    }
+  }
+
   useEffect(() => {
     if (loading || !user || location.pathname === '/account/setup') return
     let active = true
@@ -37,7 +54,16 @@ function SiteLayout() {
         </nav>
         <div className="site-account">
           {loading ? <span className="site-account-loading">확인 중</span> : user
-            ? <><AdminNavigationLink /><Link className="site-account-link" to="/account">내 계정</Link></>
+            ? <>
+              <div className="site-account-actions">
+                <AdminNavigationLink />
+                <Link className="site-account-link" to="/account">내 계정</Link>
+                <button className="site-logout-button" type="button" disabled={signingOut} onClick={() => void handleSignOut()}>
+                  {signingOut ? '로그아웃 중…' : '로그아웃'}
+                </button>
+              </div>
+              {signOutError && <span className="site-account-error" role="alert">{signOutError}</span>}
+            </>
             : <Link className="site-account-link" to="/account">로그인</Link>}
         </div>
       </header>
