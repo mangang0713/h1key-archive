@@ -142,6 +142,10 @@ export async function deleteCommunityContent(contentType: 'guestbook' | 'review'
   return invoke('delete-content', { contentType, contentId })
 }
 
+export async function deleteCommunityMedia(mediaId: string) {
+  return invoke('delete-media', { mediaId })
+}
+
 export async function reportCommunityContent(contentType: 'guestbook' | 'review', contentId: string, reason: string, details: string) {
   return invoke('report-content', { contentType, contentId, reason, details })
 }

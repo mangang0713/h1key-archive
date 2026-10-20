@@ -52,7 +52,10 @@
 .user-post-card time { color: #85899a; font-size: 12px; }
 .user-post-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.72; color: #3d3e4a; }
 .user-photo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
-.user-photo-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: #f1f1f5; }
+.user-photo-item { position: relative; min-width: 0; margin: 0; }
+.user-photo-grid img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: #f1f1f5; }
+.admin-photo-delete { position: absolute; right: 6px; bottom: 6px; min-height: 36px; padding: 0 10px; border: 1px solid rgb(255 255 255 / 70%); border-radius: 9px; background: rgb(35 26 42 / 82%); color: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.admin-photo-delete:focus-visible { outline: 3px solid #9b7be0; outline-offset: 2px; }
 .post-actions, .account-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .account-actions { align-items: center; justify-content: space-between; gap: 14px; }
 .account-danger-zone { display: flex; align-items: center; gap: 10px; margin-left: auto; color: #8b5a60; font-size: 12px; text-align: right; }
@@ -72,6 +75,22 @@
 .review-rating { color: #e49a22; letter-spacing: .08em; }
 .report-card { margin: 14px 0; }
 .report-card blockquote { margin: 12px 0; padding: 12px 14px; border-left: 3px solid #a78bfa; background: #f7f5fc; color: #555267; white-space: pre-wrap; }
+.post-report-action { display: grid; justify-items: start; }
+.report-error { margin: 4px 0; color: #a61b2b; font-size: 13px; line-height: 1.5; }
+.report-confirmation { width: min(460px, calc(100% - 32px)); max-height: min(80vh, 640px); padding: 0; overflow: auto; border: 1px solid #e5e1ef; border-radius: 18px; background: #fff; color: #25263a; box-shadow: 0 24px 80px rgb(20 18 35 / 24%); }
+.report-confirmation::backdrop { background: rgb(20 18 35 / 55%); backdrop-filter: blur(3px); }
+.report-dialog-content { display: grid; gap: 12px; padding: 24px; }
+.report-dialog-content h2 { margin: 0; font-size: 20px; }
+.report-dialog-content p { margin: 0; color: #666b7b; font-size: 14px; line-height: 1.65; }
+.report-dialog-content label { color: #34364a; font-size: 13px; font-weight: 700; }
+.report-dialog-content textarea { width: 100%; box-sizing: border-box; resize: vertical; padding: 12px 13px; border: 1px solid #d9dbe5; border-radius: 11px; color: #1b1b2a; font: inherit; line-height: 1.6; }
+.report-dialog-content :focus-visible { outline: 3px solid #9b7be0; outline-offset: 2px; }
+.report-dialog-count { justify-self: end; color: #85899a; font-size: 12px; }
+.report-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.report-confirmation-content { justify-items: center; padding: 28px; text-align: center; }
+.report-confirmation-content h2 { margin: 0; }
+.report-confirmation-content .primary-button { margin-top: 4px; }
+.report-confirmation-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: #e9f7ef; color: #28754d; font-size: 22px; font-weight: 800; }
 .policy-section { margin: 14px 0; padding: 20px 22px; border: 1px solid #e6e7ee; border-radius: 16px; background: #fff; }
 .policy-section h2 { margin: 0 0 8px; font-size: 18px; }
 .policy-section p { margin: 0; color: #555b69; line-height: 1.75; }

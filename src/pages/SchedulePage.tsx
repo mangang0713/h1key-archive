@@ -4,14 +4,16 @@ import { locations } from '../data/locations'
 import { schedules } from '../data/schedules'
 import { songs } from '../data/songs'
 import { useAuth } from '../features/auth/AuthProvider'
-import { acceptCommunityTerms, deleteCommunityContent, getOwnScheduleReview, getScheduleReactions, getScheduleReviews, reportCommunityContent, saveScheduleReview, toggleScheduleLike } from '../features/community/api'
-import type { ScheduleReview } from '../features/community/types'
+import { acceptCommunityTerms, deleteCommunityContent, deleteCommunityMedia, getOwnScheduleReview, getScheduleReactions, getScheduleReviews, reportCommunityContent, saveScheduleReview, toggleScheduleLike } from '../features/community/api'
+import { claimHessxlAdmin, isCurrentArchiveAdmin } from '../features/community/adminApi'
+import type { CommunityMedia, ScheduleReview } from '../features/community/types'
 import TurnstileWidget from '../components/security/TurnstileWidget'
 import './CommunityPages.css'
 
 function SchedulePage() {
   const { scheduleId = '' } = useParams()
   const { user } = useAuth()
+  const [adminCheck, setAdminCheck] = useState<{ userId: string; isAdmin: boolean } | null>(null)
   const userIdForFetch = user?.id
   const schedule = useMemo(() => schedules.find((item) => item.id === scheduleId), [scheduleId])
   const location = schedule?.locationId ? locations.find((item) => item.id === schedule.locationId) : undefined
@@ -57,6 +59,17 @@ function SchedulePage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void refresh() }, [refresh])
 
+  useEffect(() => {
+    if (!user) return
+    let active = true
+    void claimHessxlAdmin().then(isCurrentArchiveAdmin).then((isAdmin) => {
+      if (active) setAdminCheck({ userId: user.id, isAdmin })
+    }).catch(() => {
+      if (active) setAdminCheck({ userId: user.id, isAdmin: false })
+    })
+    return () => { active = false }
+  }, [user])
+
   if (!schedule) return <section className="community-page"><div className="community-alert">해당 일정을 찾을 수 없습니다.</div><Link to="/">지도에서 찾기</Link></section>
   const currentSchedule = schedule
   const songById = new Map(songs.map((song) => [song.id, song]))
@@ -91,9 +104,15 @@ function SchedulePage() {
   }
 
   async function handleDelete(reviewId: string) {
-    if (!window.confirm('후기를 삭제할까요?')) return
+    if (!window.confirm(isAdmin ? '관리자 권한으로 이 후기와 첨부 사진을 모두 삭제할까요?' : '후기를 삭제할까요?')) return
     try { await deleteCommunityContent('review', reviewId); await refresh() }
     catch (error) { setMessage(error instanceof Error ? error.message : '후기를 삭제하지 못했습니다.') }
+  }
+
+  async function removePhoto(media: CommunityMedia) {
+    if (!window.confirm('이 사진만 삭제할까요? 후기는 그대로 남습니다.')) return
+    try { await deleteCommunityMedia(media.id); await refresh() }
+    catch (error) { setMessage(error instanceof Error ? error.message : '사진을 삭제하지 못했습니다.') }
   }
 
   async function loadMoreReviews() {
@@ -112,6 +131,8 @@ function SchedulePage() {
     try { await reportCommunityContent('review', review.id, reason, ''); setMessage('신고를 접수했습니다.') }
     catch (error) { setMessage(error instanceof Error ? error.message : '신고를 접수하지 못했습니다.') }
   }
+
+  const isAdmin = Boolean(user && adminCheck?.userId === user.id && adminCheck.isAdmin)
 
   return (
     <section className="community-page schedule-community-page">
@@ -148,9 +169,15 @@ function SchedulePage() {
         {reviews.map((review) => <article className="user-post-card" key={review.id}>
           <header><strong>{review.author_name}</strong><span className="review-rating" aria-label={`${review.rating}점`}>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span><time dateTime={review.created_at}>{new Date(review.created_at).toLocaleDateString('ko-KR')}</time></header>
           <p className="user-post-body">{review.body}</p>
-          {!!review.media?.length && <div className="user-photo-grid">{review.media.map((media) => media.signed_url && <img key={media.id} src={media.signed_url} loading="lazy" alt="후기 첨부 사진" />)}</div>}
+          {!!review.media?.length && <div className="user-photo-grid">{review.media.map((media) => media.signed_url && <figure className="user-photo-item" key={media.id}>
+            <img src={media.signed_url} loading="lazy" alt="후기 첨부 사진" />
+            {isAdmin && <button className="admin-photo-delete" type="button" aria-label="후기 사진 삭제" onClick={() => void removePhoto(media)}>사진 삭제</button>}
+          </figure>)}</div>}
           {!!review.media?.length && !review.media.some((media) => media.signed_url) && <p className="community-small">사진을 지금은 불러올 수 없습니다.</p>}
-          {user && review.is_mine && <div className="post-actions"><button className="text-button" type="button" onClick={() => { setEditingId(review.id); setBody(review.body); setRating(review.rating) }}>수정하기</button><button className="text-button danger-text" type="button" onClick={() => void handleDelete(review.id)}>삭제</button></div>}
+          {user && (review.is_mine || isAdmin) && <div className="post-actions">
+            {review.is_mine && <button className="text-button" type="button" onClick={() => { setEditingId(review.id); setBody(review.body); setRating(review.rating) }}>수정하기</button>}
+            <button className="text-button danger-text" type="button" onClick={() => void handleDelete(review.id)}>{isAdmin && !review.is_mine ? '관리자 삭제' : '삭제'}</button>
+          </div>}
           {user && !review.is_mine && <button className="text-button" type="button" onClick={() => void handleReport(review)}>신고</button>}
         </article>)}
         {hasMoreReviews && <button className="secondary-button load-more" type="button" onClick={() => void loadMoreReviews()}>후기 더 보기</button>}

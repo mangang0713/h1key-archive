@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthProvider'
-import { acceptCommunityTerms, deleteCommunityContent, getGuestbookPosts, reportCommunityContent, saveGuestbookPost } from '../features/community/api'
-import type { GuestbookPost } from '../features/community/types'
+import { acceptCommunityTerms, deleteCommunityContent, deleteCommunityMedia, getGuestbookPosts, reportCommunityContent, saveGuestbookPost } from '../features/community/api'
+import { claimHessxlAdmin, isCurrentArchiveAdmin } from '../features/community/adminApi'
+import type { CommunityMedia, GuestbookPost } from '../features/community/types'
 import TurnstileWidget from '../components/security/TurnstileWidget'
 import './CommunityPages.css'
 
@@ -10,6 +11,7 @@ const MAX_POST_IMAGES = 3
 
 function GuestbookPage() {
   const { user, configured } = useAuth()
+  const [adminCheck, setAdminCheck] = useState<{ userId: string; isAdmin: boolean } | null>(null)
   const [posts, setPosts] = useState<GuestbookPost[]>([])
   const [body, setBody] = useState('')
   const [files, setFiles] = useState<File[]>([])
@@ -20,6 +22,15 @@ function GuestbookPage() {
   const [hasMore, setHasMore] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [reportingPostId, setReportingPostId] = useState<string>()
+  const [reportedPostIds, setReportedPostIds] = useState<Set<string>>(() => new Set())
+  const [reportErrors, setReportErrors] = useState<Record<string, string>>({})
+  const [reportTarget, setReportTarget] = useState<GuestbookPost | null>(null)
+  const [reportDetails, setReportDetails] = useState('')
+  const [reportDialogStep, setReportDialogStep] = useState<'form' | 'success'>('form')
+  const reportDialogRef = useRef<HTMLDialogElement>(null)
+  const reportTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const reportPrimaryButtonRef = useRef<HTMLButtonElement>(null)
   const [turnstileToken, setTurnstileToken] = useState('')
   const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const [termsAccepted, setTermsAccepted] = useState(false)
@@ -35,12 +46,35 @@ function GuestbookPage() {
   }, [configured])
 
   // 최초 목록 데이터는 네트워크 요청 결과로 상태를 갱신합니다.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadPosts() }, [loadPosts])
+
+  useEffect(() => {
+    if (!user) return
+    let active = true
+    void claimHessxlAdmin().then(isCurrentArchiveAdmin).then((isAdmin) => {
+      if (active) setAdminCheck({ userId: user.id, isAdmin })
+    }).catch(() => {
+      if (active) setAdminCheck({ userId: user.id, isAdmin: false })
+    })
+    return () => { active = false }
+  }, [user])
 
   useEffect(() => () => {
     previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
   }, [])
+
+  useEffect(() => {
+    if (!reportTarget) return
+    const dialog = reportDialogRef.current
+    if (!dialog) return
+    dialog.showModal()
+    reportTextareaRef.current?.focus()
+    return () => { if (dialog.open) dialog.close() }
+  }, [reportTarget])
+
+  useEffect(() => {
+    if (reportTarget && reportDialogStep === 'success') reportPrimaryButtonRef.current?.focus()
+  }, [reportDialogStep, reportTarget])
 
   function replaceSelectedPhotos(nextFiles: File[]) {
     previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
@@ -95,21 +129,51 @@ function GuestbookPage() {
   }
 
   async function removePost(post: GuestbookPost) {
-    if (!window.confirm('이 글을 삭제할까요?')) return
+    if (!window.confirm(isAdmin ? '관리자 권한으로 이 글과 첨부 사진을 모두 삭제할까요?' : '이 글을 삭제할까요?')) return
     try {
       await deleteCommunityContent('guestbook', post.id)
       await loadPosts()
     } catch (error) { setMessage(error instanceof Error ? error.message : '글을 삭제하지 못했습니다.') }
   }
 
-  async function reportPost(post: GuestbookPost) {
-    const reason = window.prompt('신고 사유를 입력해 주세요. (예: 스팸, 괴롭힘, 개인정보, 기타)')
-    if (!reason?.trim()) return
+  async function removePhoto(media: CommunityMedia) {
+    if (!window.confirm('이 사진만 삭제할까요? 글은 그대로 남습니다.')) return
     try {
-      await reportCommunityContent('guestbook', post.id, reason.trim(), '')
-      setMessage('신고를 접수했습니다. 신고만으로 글이 자동 숨김 처리되지는 않습니다.')
-    } catch (error) { setMessage(error instanceof Error ? error.message : '신고를 접수하지 못했습니다.') }
+      await deleteCommunityMedia(media.id)
+      await loadPosts()
+    } catch (error) { setMessage(error instanceof Error ? error.message : '사진을 삭제하지 못했습니다.') }
   }
+
+  function openReportDialog(post: GuestbookPost) {
+    if (reportingPostId || reportedPostIds.has(post.id)) return
+    setReportDetails('')
+    setReportDialogStep('form')
+    setReportErrors((current) => { const next = { ...current }; delete next[post.id]; return next })
+    setReportTarget(post)
+  }
+
+  async function submitReport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const post = reportTarget
+    if (!post || reportingPostId) return
+    setReportingPostId(post.id)
+    try {
+      await reportCommunityContent('guestbook', post.id, '기타', reportDetails.trim())
+      setReportedPostIds((current) => new Set(current).add(post.id))
+      setReportDialogStep('success')
+    } catch (error) {
+      setReportErrors((current) => ({ ...current, [post.id]: error instanceof Error ? error.message : '신고를 접수하지 못했습니다.' }))
+    } finally { setReportingPostId(undefined) }
+  }
+
+  function closeReportDialog() {
+    if (reportingPostId) return
+    setReportTarget(null)
+    setReportDetails('')
+    setReportDialogStep('form')
+  }
+
+  const isAdmin = Boolean(user && adminCheck?.userId === user.id && adminCheck.isAdmin)
 
   return (
     <section className="community-page">
@@ -153,17 +217,45 @@ function GuestbookPage() {
           <article className="user-post-card" key={post.id}>
             <header><strong>{post.author_name}</strong><time dateTime={post.created_at}>{new Date(post.created_at).toLocaleDateString('ko-KR')}</time></header>
             <p className="user-post-body">{post.body}</p>
-            {!!post.media?.length && <div className="user-photo-grid">{post.media.map((media) => media.signed_url && <img key={media.id} src={media.signed_url} loading="lazy" alt="방명록 첨부 사진" />)}</div>}
+            {!!post.media?.length && <div className="user-photo-grid">{post.media.map((media) => media.signed_url && <figure className="user-photo-item" key={media.id}>
+              <img src={media.signed_url} loading="lazy" alt="방명록 첨부 사진" />
+              {isAdmin && <button className="admin-photo-delete" type="button" aria-label="방명록 사진 삭제" onClick={() => void removePhoto(media)}>사진 삭제</button>}
+            </figure>)}</div>}
             {!!post.media?.length && !post.media.some((media) => media.signed_url) && <p className="community-small">사진을 지금은 불러올 수 없습니다.</p>}
-            {user && post.is_mine && <div className="post-actions">
-              <button type="button" className="text-button" onClick={() => { setEditingId(post.id); setBody(post.body); setFiles([]); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>수정</button>
-              <button type="button" className="text-button danger-text" onClick={() => void removePost(post)}>삭제</button>
+            {user && (post.is_mine || isAdmin) && <div className="post-actions">
+              {post.is_mine && <button type="button" className="text-button" onClick={() => { setEditingId(post.id); setBody(post.body); setFiles([]); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>수정</button>}
+              {(post.is_mine || isAdmin) && <button type="button" className="text-button danger-text" onClick={() => void removePost(post)}>{isAdmin && !post.is_mine ? '관리자 삭제' : '삭제'}</button>}
             </div>}
-            {user && !post.is_mine && <button type="button" className="text-button" onClick={() => void reportPost(post)}>신고</button>}
+            {user && !post.is_mine && <div className="post-report-action">
+              <button type="button" className="text-button" disabled={reportingPostId === post.id || reportedPostIds.has(post.id)} onClick={() => openReportDialog(post)}>
+                {reportedPostIds.has(post.id) ? '신고 접수됨' : '신고'}
+              </button>
+              {reportErrors[post.id] && <p className="report-error" role="alert">{reportErrors[post.id]}</p>}
+            </div>}
           </article>
         ))}
       </div>
       {hasMore && <button className="secondary-button load-more" type="button" onClick={() => void loadPosts(page + 1, true)}>더 불러오기</button>}
+      <dialog ref={reportDialogRef} className="report-confirmation" aria-labelledby="report-confirmation-title" onCancel={(event) => { event.preventDefault(); closeReportDialog() }}>
+        {reportDialogStep === 'form' && <form className="report-dialog-content" onSubmit={(event) => void submitReport(event)}>
+          <h2 id="report-confirmation-title">게시물 신고</h2>
+          <p>신고 사유를 적어 주세요. 설명은 선택 사항이며, 비워도 신고할 수 있습니다.</p>
+          <label htmlFor="guestbook-report-details">신고 사유 (선택)</label>
+          <textarea ref={reportTextareaRef} id="guestbook-report-details" value={reportDetails} maxLength={500} rows={4} placeholder="예: 개인정보가 포함되어 있어요." onChange={(event) => setReportDetails(event.target.value)} />
+          <span className="report-dialog-count">{reportDetails.length}/500자</span>
+          {reportTarget && reportErrors[reportTarget.id] && <p className="report-error" role="alert">{reportErrors[reportTarget.id]}</p>}
+          <div className="report-dialog-actions">
+            <button className="secondary-button" type="button" disabled={reportingPostId !== undefined} onClick={closeReportDialog}>취소</button>
+            <button className="primary-button" type="submit" disabled={reportingPostId !== undefined}>{reportingPostId ? '접수 중…' : '신고하기'}</button>
+          </div>
+        </form>}
+        {reportDialogStep === 'success' && <div className="report-dialog-content report-confirmation-content">
+          <span className="report-confirmation-icon" aria-hidden="true">✓</span>
+          <h2 id="report-confirmation-title">신고가 접수되었습니다</h2>
+          <p>관리자가 내용을 확인할 예정입니다. 신고 접수만으로 글이 자동 숨김 처리되지는 않습니다.</p>
+          <button ref={reportPrimaryButtonRef} className="primary-button" type="button" onClick={closeReportDialog}>확인</button>
+        </div>}
+      </dialog>
     </section>
   )
 }

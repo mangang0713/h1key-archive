@@ -189,13 +189,29 @@ async function allowMediaRequest(request: Request, client: SupabaseClient) {
   return Boolean(data)
 }
 
-async function deleteOwnedContent(client: SupabaseClient, contentType: string, contentId: string, userId: string) {
+async function deleteCommunityContent(client: SupabaseClient, contentType: string, contentId: string, userId: string) {
   const table = contentType === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
-  const { data: owned, error: ownershipError } = await client.from(table).select('id').eq('id', contentId).eq('user_id', userId).maybeSingle()
-  if (ownershipError || !owned) throw new Error('본인 게시물만 삭제할 수 있습니다.')
+  const { data: post, error: ownershipError } = await client.from(table).select('id, user_id').eq('id', contentId).maybeSingle()
+  if (ownershipError || !post) throw new Error('게시물을 찾지 못했습니다.')
+  if (post.user_id !== userId && !await isAdmin(client, userId)) throw new Error('본인 게시물만 삭제할 수 있습니다.')
   await removeMediaForContent(client, contentType, contentId)
-  const { error } = await client.from(table).delete().eq('id', contentId).eq('user_id', userId)
+  const { error } = await client.from(table).delete().eq('id', contentId)
   if (error) throw new Error('게시물을 삭제하지 못했습니다.')
+}
+
+async function deleteCommunityMedia(client: SupabaseClient, mediaId: string, userId: string) {
+  if (!await isAdmin(client, userId)) throw new Error('관리자만 첨부 사진을 직접 삭제할 수 있습니다.')
+  const { data: media, error: mediaError } = await client.from('community_media')
+    .select('id, owner_id, object_path, byte_size').eq('id', mediaId).maybeSingle()
+  if (mediaError || !media) throw new Error('첨부 사진을 찾지 못했습니다.')
+  const { error: storageError } = await client.storage.from('community-images').remove([media.object_path])
+  if (storageError) throw new Error('첨부 사진 파일을 지우지 못했습니다.')
+  if (media.owner_id) {
+    const { error: quotaError } = await client.rpc('release_community_media', { p_user_id: media.owner_id, p_byte_size: media.byte_size })
+    if (quotaError) throw new Error('사진 사용량을 갱신하지 못했습니다.')
+  }
+  const { error: deleteError } = await client.from('community_media').delete().eq('id', media.id)
+  if (deleteError) throw new Error('첨부 사진 기록을 지우지 못했습니다.')
 }
 
 async function uploadImage(request: Request, userId: string, client: SupabaseClient, form: FormData) {
@@ -302,7 +318,7 @@ Deno.serve(async (request) => {
 
     const captchaActions = new Set(['create-guestbook', 'edit-guestbook', 'create-review', 'edit-review'])
     if (captchaActions.has(String(action))) await verifyTurnstile(request, rawBody.turnstileToken)
-    if (!['moderate-report', 'get-admin-settings', 'update-admin-settings', 'get-admin-reports', 'delete-content', 'delete-account'].includes(String(action))) {
+    if (!['moderate-report', 'get-admin-settings', 'update-admin-settings', 'get-admin-reports', 'delete-content', 'delete-media', 'delete-account'].includes(String(action))) {
       await assertCommunityEnabled(adminClient)
     }
 
@@ -356,7 +372,12 @@ Deno.serve(async (request) => {
       await takeLimit(adminClient, userId, 'delete-content', 10, 3600)
       const contentType = rawBody.contentType
       if (contentType !== 'guestbook' && contentType !== 'review') throw new Error('삭제할 게시물 종류가 올바르지 않습니다.')
-      await deleteOwnedContent(adminClient, contentType, String(rawBody.contentId), userId)
+      await deleteCommunityContent(adminClient, contentType, text(rawBody.contentId, 100), userId)
+      return respond({ deleted: true }, 200, origin)
+    }
+    if (action === 'delete-media') {
+      await takeLimit(adminClient, userId, 'delete-media', 20, 3600)
+      await deleteCommunityMedia(adminClient, text(rawBody.mediaId, 100), userId)
       return respond({ deleted: true }, 200, origin)
     }
     if (action === 'report-content') {
