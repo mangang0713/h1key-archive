@@ -71,7 +71,7 @@ function SchedulePage() {
     return () => { active = false }
   }, [user])
 
-  if (!schedule) return <section className="community-page"><div className="community-alert">해당 일정을 찾을 수 없습니다.</div><Link to="/">지도에서 찾기</Link></section>
+  if (!schedule) return <section className="community-page"><div className="community-alert">해당 일정을 찾을 수 없습니다.</div><Link to="/archive">지도에서 찾기</Link></section>
   const currentSchedule = schedule
   const songById = new Map(songs.map((song) => [song.id, song]))
 
@@ -161,7 +161,7 @@ function SchedulePage() {
 
   return (
     <section className="community-page schedule-community-page">
-      <Link className="back-link" to="/">← 지도</Link>
+      <Link className="back-link" to="/archive">← 지도</Link>
       <div className="community-heading">
         <span className="community-eyebrow">SCHEDULE RECORD</span>
         <h1>{schedule.title}</h1>

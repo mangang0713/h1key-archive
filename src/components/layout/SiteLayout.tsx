@@ -49,7 +49,7 @@ function SiteLayout() {
           <span>H1-KEY <b>ARCHIVE</b></span>
         </Link>
         <nav className="site-navigation" aria-label="주요 메뉴">
-          <NavLink to="/" end>지도</NavLink>
+          <NavLink to="/archive">지도</NavLink>
           <NavLink to="/guestbook">방명록</NavLink>
         </nav>
         <div className="site-account">
