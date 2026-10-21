@@ -34,7 +34,7 @@
   margin: 0;
   color: #99f6e4;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .time-travel-header strong {
@@ -43,6 +43,7 @@
   margin-top: -3px;
   color: #fbbf24;
   font-size: 19px;
+  font-weight: 600;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
@@ -85,7 +86,7 @@
   color: inherit;
   font: inherit;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -108,6 +109,7 @@
 .time-travel-current-schedule strong {
   color: #fff;
   font-size: 13px;
+  font-weight: 600;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -129,7 +131,7 @@
   margin-right: auto;
   color: #cbd5e1;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .time-travel-speed button {
@@ -142,7 +144,7 @@
   color: inherit;
   font: inherit;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 500;
   cursor: pointer;
 }
 

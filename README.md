@@ -47,10 +47,13 @@
 
 ## 기술 스택
 
-- **Frontend:** React, TypeScript, Vite
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS v4
+- **Typography:** Pretendard Variable dynamic subset webfont (with system-font fallback)
 - **Map:** MapLibre GL JS
 - **Map style / tiles:** OpenFreeMap (현재 개발용 스타일)
 - **Code quality:** ESLint
+
+Tailwind 유틸리티는 공유 레이아웃과 생일 랜딩 페이지부터 적용하고 있습니다. MapLibre 동적 마커·Popup과 커뮤니티 폼처럼 세부 상태가 많은 화면은 기존 CSS를 유지하며 단계적으로 전환합니다.
 
 ## 실행 방법
 

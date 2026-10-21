@@ -38,6 +38,7 @@
 .archive-data-header h2 {
   margin: 0;
   font-size: 19px;
+  font-weight: 600;
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -46,7 +47,7 @@
   margin: 0 0 4px;
   color: #64748b;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: .09em;
 }
 
@@ -87,7 +88,7 @@
   color: #475569;
   font: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -155,7 +156,7 @@
   min-width: 0;
   color: #64748b;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .archive-data-selects select,
@@ -184,7 +185,7 @@
   margin: 0 0 8px;
   color: #64748b;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .archive-data-list {
@@ -223,6 +224,7 @@
 
 .archive-data-list strong {
   font-size: 13px;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
@@ -252,7 +254,7 @@
   background: #ede9fe;
   color: #4c1d95;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .archive-data-filter-chip button {
@@ -277,7 +279,7 @@
   color: #4338ca;
   font: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -303,6 +305,7 @@
 .archive-data-scroll h3 {
   margin: 12px 0 5px;
   font-size: 15px;
+  font-weight: 600;
 }
 
 .archive-data-setlist {

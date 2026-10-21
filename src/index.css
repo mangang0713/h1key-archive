@@ -1,5 +1,12 @@
-﻿:root {
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+}
+
+:root {
+  font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  font-weight: 400;
   color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -9,6 +16,29 @@
 
 body {
   margin: 0;
+  font-family: inherit;
+  font-weight: 400;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  font-weight: 500;
+}
+
+h1 {
+  font-weight: 700;
+}
+
+h2,
+h3,
+h4 {
+  font-weight: 600;
 }
 
 #root {
