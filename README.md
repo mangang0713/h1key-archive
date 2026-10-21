@@ -38,11 +38,12 @@
 ### 스케줄 및 세트리스트
 - 장소별 스케줄 **1건은 상세로 바로 이동**, 여러 건은 날짜별 목록에서 선택
 - 상세 정보는 행사 정보·세트리스트·사진·영상 탭으로 나누어 확인
-- 행사명, 날짜, 장소와 확인된 시작 시간 표시. 같은 날짜 행사 순서는 데이터 검증용으로 관리하며 화면에는 표시하지 않음
+- 행사 상세 페이지에서 날짜·장소와 확인된 시작 시간을 보조 정보로 표시. 같은 날짜 행사 순서는 데이터 검증용으로 관리하며 화면에는 표시하지 않음
 - **세트리스트를 공연 순서대로 표시**하고 곡 ID를 통해 곡 정보를 연결
 - 전체 일정 검색 결과에서 지도에 표시되지 않는 영상통화·장소 미확인 일정도 열람
 - 세트리스트 **확인 완료 / 일부 확인 / 임시 기본 입력 / 미확인 / 공연 곡 없음** 상태 구분
 - 곡별 통계는 확인된 곡만 집계하며, 일부 확인 일정은 확인 가능한 최소 기록으로 표시
+- 전체 기록의 행사 상세에서 좋아요 수와 최근 후기를 확인하고, 기존 일정 상세 페이지로 이동해 좋아요·후기를 이용
 - 장소·일정·곡은 TypeScript 데이터 파일에서 계속 수정·추가
 
 ## 기술 스택
@@ -90,28 +91,29 @@ src/
 │  ├─ AdminReportsPage.tsx        # 신고 검토와 숨김 게시물 복원
 │  └─ AdminSettingsPage.tsx       # 사용자 기능·사진 중단 스위치
 ├─ components/
+│  ├─ archive/
+│  │  ├─ ArchiveExplorerPanel.tsx  # 전체 일정 검색·곡별 기록·선택 일정 상세
+│  │  ├─ ArchiveScheduleFeedback.tsx # 행사 상세 좋아요와 최근 후기 미리보기
+│  │  └─ ArchiveExplorerPanel.css # 기록 탐색 패널 스타일
+│  ├─ community/                  # 작성 폼, 신고·이의제기·운영 사유 대화상자
 │  ├─ layout/                     # 공유 상단 메뉴와 페이지 틀
-│  ├─ community/                  # 방명록 작성 폼과 신고 대화상자
 │  ├─ map/
 │  │  ├─ ArchiveMap.tsx                  # 지도 생명주기·카메라·기능 조율
 │  │  ├─ ArchiveMap.css                  # 지도 컨테이너·시간순 이동 마커·처음으로 버튼 스타일
 │  │  ├─ ArchiveExplorerControls.tsx     # 지도 탐색 버튼과 지역·영상통화·전체 기록 패널 연결
-│  │  ├─ ArchiveExplorerControls.css    # 지도 탐색 컨트롤 스타일
+│  │  ├─ ArchiveExplorerControls.css     # 지도 탐색 컨트롤 스타일
 │  │  ├─ TimeTravelPanel.tsx             # 시간순 탐방 조작 UI
-│  │  ├─ TimeTravelPanel.css              # 시간순 탐방 UI 스타일
+│  │  ├─ TimeTravelPanel.css             # 시간순 탐방 UI 스타일
 │  │  ├─ RegionNavigationPanel.tsx       # 지역 선택 UI
 │  │  ├─ locationMarkerLayers.ts         # MapLibre 클러스터·장소 핀 레이어와 확대 단계별 크기
-│  │  ├─ timeTravelController.ts        # 시간순 이동과 도착 마커
-│  │  ├─ regionNavigationController.ts  # 지역 간 카메라 이동
+│  │  ├─ timeTravelController.ts         # 시간순 이동과 도착 마커
+│  │  ├─ regionNavigationController.ts   # 지역 간 카메라 이동
 │  │  ├─ archiveMapData.ts               # 지도에 필요한 장소·일정 데이터 계산
 │  │  ├─ SchedulePopupContent.ts         # 장소 스케줄 Popup 목록 및 상세 콘텐츠
 │  │  └─ SchedulePopupContent.css        # 장소 스케줄 Popup 스타일
-│  ├─ schedule/
-│     ├─ LocationlessSchedulePanel.tsx # 장소 없는 일정의 목록 및 상세 UI
-│     └─ LocationlessSchedulePanel.css # 해당 패널 스타일
-│  └─ archive/
-│     ├─ ArchiveExplorerPanel.tsx # 전체 일정 검색 및 곡별 기록
-│     └─ ArchiveExplorerPanel.css # 기록 탐색 패널 스타일
+│  └─ schedule/
+│     ├─ LocationlessSchedulePanel.tsx   # 장소 없는 일정의 목록 및 상세 UI
+│     └─ LocationlessSchedulePanel.css   # 해당 패널 스타일
 ├─ data/
 │  ├─ locations.ts               # 장소 및 좌표
 │  ├─ schedules.ts               # 스케줄 데이터
@@ -192,6 +194,7 @@ Supabase 프로젝트에 DB 마이그레이션과 `community-api` Edge Function�
 - [x] 장소·스케줄·곡 데이터 모델 분리
 - [x] 영상통화 일정의 날짜순 목록·상세 보기 및 바깥 클릭 닫기
 - [x] 전체 일정 검색 및 곡별 공연 일정 수 자동 계산
+- [x] 전체 기록의 선택 행사 상세에 좋아요 수·최근 후기 미리보기와 일정 상세 이동 연결
 - [x] 사용자 제공 실제 활동 스케줄 110건 입력
 - [x] 공개 링크로 접근 가능한 테스트 배포
 - [x] 영상통화 5건 및 장소 미확인 대면 일정 보존
