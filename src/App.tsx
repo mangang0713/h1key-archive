@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './features/auth/AuthProvider'
 import SiteLayout from './components/layout/SiteLayout'
 
@@ -13,10 +13,11 @@ const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage'))
 const CommunityPolicyPage = lazy(() => import('./pages/CommunityPolicyPage'))
 const GuestbookPage = lazy(() => import('./pages/GuestbookPage'))
 const SchedulePage = lazy(() => import('./pages/SchedulePage'))
+const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
 
 function App() {
   return (
-    <HashRouter>
+    <BrowserRouter basename={routerBasename}>
       <AuthProvider>
         <Routes>
           <Route element={<SiteLayout />}>
@@ -34,7 +35,7 @@ function App() {
           </Route>
         </Routes>
       </AuthProvider>
-    </HashRouter>
+    </BrowserRouter>
   )
 }
 

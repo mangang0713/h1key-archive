@@ -7,6 +7,7 @@ import '../media/XPostEmbeds.css'
 import './SchedulePopupContent.css'
 
 const songsById = new Map(songs.map((song) => [song.id, song]))
+const appBasePath = import.meta.env.BASE_URL.replace(/\/$/, '')
 
 export type SchedulePopupReaction = { likeCount: number; liked: boolean }
 
@@ -32,7 +33,7 @@ function createScheduleLikeControl(
     control.type = 'button'
     control.disabled = true
   } else {
-    control.href = '#/account?returnTo=%2Farchive'
+    control.href = `${appBasePath}/account?returnTo=%2Farchive`
     control.title = '로그인 후 좋아요에 참여할 수 있어요.'
   }
   const status = document.createElement('span')
@@ -366,7 +367,7 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     content.append(tablist, panelContainer)
     const communityLink = document.createElement('a')
     communityLink.className = 'schedule-community-link'
-    communityLink.href = `#/schedule/${encodeURIComponent(selected.id)}`
+    communityLink.href = `${appBasePath}/schedule/${encodeURIComponent(selected.id)}`
     communityLink.textContent = '후기 보기'
     content.append(communityLink)
   } else {

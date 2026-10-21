@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>페이지를 불러오는 중입니다</title>
+    <script>
+      // Keep this project path aligned with vite.config.ts's GitHub Pages base.
+      const basePath = '/happy-riina-day/'
+      const path = window.location.pathname.startsWith(basePath)
+        ? window.location.pathname.slice(basePath.length)
+        : ''
+      const route = `/${path}${window.location.search}${window.location.hash}`
+      window.location.replace(`${basePath}?__ghpages_route=${encodeURIComponent(route)}`)
+    </script>
+  </head>
+  <body>
+    페이지를 불러오는 중입니다.
+  </body>
+</html>
