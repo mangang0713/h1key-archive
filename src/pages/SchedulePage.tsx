@@ -7,6 +7,7 @@ import { useAuth } from '../features/auth/AuthProvider'
 import { acceptCommunityTerms, deleteCommunityContent, deleteCommunityMedia, getOwnScheduleReview, getScheduleReactions, getScheduleReviews, hideCommunityContent, reportCommunityContent, saveScheduleReview, toggleScheduleLike } from '../features/community/api'
 import { claimHessxlAdmin, isCurrentArchiveAdmin } from '../features/community/adminApi'
 import type { CommunityMedia, ScheduleReview } from '../features/community/types'
+import ModerationReasonDialog from '../components/community/ModerationReasonDialog'
 import TurnstileWidget from '../components/security/TurnstileWidget'
 import './CommunityPages.css'
 
@@ -34,6 +35,10 @@ function SchedulePage() {
   const [turnstileToken, setTurnstileToken] = useState('')
   const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const [moderationTarget, setModerationTarget] = useState<ScheduleReview | null>(null)
+  const [moderationError, setModerationError] = useState('')
+  const [moderationSuccess, setModerationSuccess] = useState('')
+  const [moderationSubmitting, setModerationSubmitting] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!scheduleIdForFetch) return
@@ -109,19 +114,36 @@ function SchedulePage() {
     if (!review) return
     const moderatingAnotherUsersPost = isAdmin && !review.is_mine
     if (moderatingAnotherUsersPost) {
-      const reason = window.prompt('작성자에게 표시할 숨김 사유를 입력해 주세요. (최대 1000자)')?.trim()
-      if (!reason) return
-      if (reason.length > 1000) { setMessage('숨김 사유는 1000자 이내로 입력해 주세요.'); return }
-      try {
-        await hideCommunityContent('review', review.id, reason)
-        await refresh()
-        setMessage('후기를 숨겼습니다. 작성자는 내 게시글에서 7일 안에 이의제기할 수 있습니다.')
-      } catch (error) { setMessage(error instanceof Error ? error.message : '후기를 숨기지 못했습니다.') }
+      setModerationTarget(review)
+      setModerationError('')
+      setModerationSuccess('')
       return
     }
     if (!window.confirm('이 후기와 첨부 사진을 영구 삭제할까요? 삭제한 후기와 신고 기록은 복구할 수 없습니다.')) return
     try { await deleteCommunityContent('review', reviewId); await refresh() }
     catch (error) { setMessage(error instanceof Error ? error.message : '후기를 삭제하지 못했습니다.') }
+  }
+
+  async function submitHideReason(reason: string) {
+    if (!moderationTarget) return
+    setModerationSubmitting(true)
+    setModerationError('')
+    try {
+      await hideCommunityContent('review', moderationTarget.id, reason)
+      void refresh()
+      setModerationSuccess('작성자는 내 게시글에서 7일 안에 이의제기할 수 있습니다.')
+    } catch (error) {
+      setModerationError(error instanceof Error ? error.message : '후기를 숨기지 못했습니다.')
+    } finally {
+      setModerationSubmitting(false)
+    }
+  }
+
+  function closeModerationDialog() {
+    if (moderationSubmitting) return
+    setModerationTarget(null)
+    setModerationError('')
+    setModerationSuccess('')
   }
 
   async function removePhoto(media: CommunityMedia) {
@@ -209,6 +231,14 @@ function SchedulePage() {
         {hasMoreReviews && <button className="secondary-button load-more" type="button" onClick={() => void loadMoreReviews()}>후기 더 보기</button>}
       </section>
       {message && <p className="community-message" role="status">{message}</p>}
+      {moderationTarget && <ModerationReasonDialog
+        subjectLabel="일정 후기"
+        submitting={moderationSubmitting}
+        error={moderationError}
+        successMessage={moderationSuccess}
+        onSubmit={(reason) => void submitHideReason(reason)}
+        onClose={closeModerationDialog}
+      />}
     </section>
   )
 }

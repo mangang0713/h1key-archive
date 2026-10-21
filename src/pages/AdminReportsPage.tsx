@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthProvider'
 import { getAdminHiddenContent, getAdminReports, moderateReport, resolveCommunityAppeal, restoreHiddenCommunityContent } from '../features/community/api'
 import type { ContentReport, HiddenCommunityContent } from '../features/community/types'
+import AppealDecisionDialog, { type AppealDecision } from '../components/community/AppealDecisionDialog'
+import ModerationReasonDialog from '../components/community/ModerationReasonDialog'
 import './CommunityPages.css'
 
 type AdminTab = 'reports' | 'hidden'
@@ -22,6 +24,12 @@ function AdminReportsPage() {
   const [hiddenContent, setHiddenContent] = useState<HiddenCommunityContent[]>([])
   const [message, setMessage] = useState('')
   const [busyId, setBusyId] = useState<string>()
+  const [hideReportTarget, setHideReportTarget] = useState<ContentReport | null>(null)
+  const [hideReportError, setHideReportError] = useState('')
+  const [hideReportSuccess, setHideReportSuccess] = useState('')
+  const [appealDecisionTarget, setAppealDecisionTarget] = useState<{ item: HiddenCommunityContent; decision: AppealDecision } | null>(null)
+  const [appealDecisionError, setAppealDecisionError] = useState('')
+  const [appealDecisionSuccess, setAppealDecisionSuccess] = useState('')
 
   const refreshReports = useCallback(async () => {
     if (!configured || !user) return
@@ -40,18 +48,43 @@ function AdminReportsPage() {
   useEffect(() => { void refreshReports() }, [refreshReports])
 
   async function decide(report: ContentReport, decision: 'dismiss' | 'hide') {
-    const reason = (decision === 'hide' ? window.prompt('작성자에게 공개할 숨김 사유를 입력해 주세요. (최대 1000자)')?.trim() : '') ?? ''
-    if (decision === 'hide' && !reason) return
-    if (reason && reason.length > 1000) { setMessage('숨김 사유는 1000자 이내로 입력해 주세요.'); return }
+    if (decision === 'hide') {
+      setHideReportTarget(report)
+      setHideReportError('')
+      setHideReportSuccess('')
+      return
+    }
     setBusyId(report.id)
     setMessage('')
     try {
-      await moderateReport(report.id, decision, reason)
+      await moderateReport(report.id, decision)
       await refreshReports()
-      if (decision === 'hide') await refreshHiddenContent()
-      setMessage(decision === 'hide' ? '게시물을 숨겼습니다. 7일 동안 이의제기할 수 있고, 이의제기가 진행 중이면 판정까지 보존됩니다.' : '신고를 기각했습니다.')
+      setMessage('신고를 기각했습니다.')
     } catch (error) { setMessage(error instanceof Error ? error.message : '신고를 처리하지 못했습니다.') }
     finally { setBusyId(undefined) }
+  }
+
+  async function submitReportHide(reason: string) {
+    if (!hideReportTarget) return
+    setBusyId(hideReportTarget.id)
+    setHideReportError('')
+    try {
+      await moderateReport(hideReportTarget.id, 'hide', reason)
+      await refreshReports()
+      await refreshHiddenContent()
+      setHideReportSuccess('작성자는 내 게시글에서 7일 안에 이의제기할 수 있습니다.')
+    } catch (error) {
+      setHideReportError(error instanceof Error ? error.message : '게시물을 숨기지 못했습니다.')
+    } finally {
+      setBusyId(undefined)
+    }
+  }
+
+  function closeHideReportDialog() {
+    if (hideReportTarget && busyId === hideReportTarget.id) return
+    setHideReportTarget(null)
+    setHideReportError('')
+    setHideReportSuccess('')
   }
 
   async function restoreContent(item: HiddenCommunityContent) {
@@ -69,20 +102,42 @@ function AdminReportsPage() {
   async function resolveAppeal(item: HiddenCommunityContent, decision: 'approve' | 'reject') {
     const appeal = item.appeal
     if (!appeal || appeal.status !== 'pending') return
-    const reasonInput = decision === 'reject'
-      ? window.prompt('이의제기를 기각하는 이유를 작성해 주세요. 작성자에게 표시됩니다.')?.trim()
-      : window.prompt('승인 안내를 남길 수 있습니다. (선택)')?.trim()
-    if (decision === 'reject' && !reasonInput) return
-    const reason = reasonInput ?? ''
-    if (reason.length > 1000) { setMessage('답변은 1000자 이내로 입력해 주세요.'); return }
+    setAppealDecisionTarget({ item, decision })
+    setAppealDecisionError('')
+    setAppealDecisionSuccess('')
+  }
+
+  async function submitAppealDecision(reason: string) {
+    if (!appealDecisionTarget || !appealDecisionTarget.item.appeal) return
+    const { item, decision } = appealDecisionTarget
+    const appeal = item.appeal
+    if (!appeal) return
     setBusyId(appeal.id)
-    setMessage('')
+    setAppealDecisionError('')
     try {
       await resolveCommunityAppeal(appeal.id, decision, reason)
-      await refreshHiddenContent()
-      setMessage(decision === 'approve' ? '이의제기를 승인하고 게시물을 복원했습니다.' : '이의제기를 기각했습니다. 게시물은 기존 삭제 예정일까지 보존됩니다.')
-    } catch (error) { setMessage(error instanceof Error ? error.message : '이의제기를 처리하지 못했습니다.') }
+      const decidedAt = new Date().toISOString()
+      setHiddenContent((current) => decision === 'approve'
+        ? current.filter((entry) => entry.id !== item.id || entry.content_type !== item.content_type)
+        : current.map((entry) => entry.id === item.id && entry.content_type === item.content_type
+          ? { ...entry, appeal: { ...appeal, status: 'rejected', decided_at: decidedAt, decision_reason: reason || null } }
+          : entry))
+      void refreshHiddenContent()
+      setAppealDecisionSuccess(decision === 'approve'
+        ? '숨김 게시물을 다시 공개했고, 게시물은 숨김 목록에서 제거했습니다.'
+        : '게시물은 숨김 상태로 남아 있고 기존 삭제 예정일까지 보존됩니다.')
+    } catch (error) {
+      setAppealDecisionError(error instanceof Error ? error.message : '이의제기를 처리하지 못했습니다.')
+    }
     finally { setBusyId(undefined) }
+  }
+
+  function closeAppealDecisionDialog() {
+    const appealId = appealDecisionTarget?.item.appeal?.id
+    if (appealId && busyId === appealId) return
+    setAppealDecisionTarget(null)
+    setAppealDecisionError('')
+    setAppealDecisionSuccess('')
   }
 
   return (
@@ -135,6 +190,22 @@ function AdminReportsPage() {
         </div>}
       </>}
       {message && <p className="community-message" role="status">{message}</p>}
+      {hideReportTarget && <ModerationReasonDialog
+        subjectLabel={hideReportTarget.content_type === 'guestbook' ? '방명록' : '일정 후기'}
+        submitting={busyId === hideReportTarget.id}
+        error={hideReportError}
+        successMessage={hideReportSuccess}
+        onSubmit={(reason) => void submitReportHide(reason)}
+        onClose={closeHideReportDialog}
+      />}
+      {appealDecisionTarget && <AppealDecisionDialog
+        decision={appealDecisionTarget.decision}
+        submitting={busyId === appealDecisionTarget.item.appeal?.id}
+        error={appealDecisionError}
+        successMessage={appealDecisionSuccess}
+        onSubmit={(reason) => void submitAppealDecision(reason)}
+        onClose={closeAppealDecisionDialog}
+      />}
     </section>
   )
 }

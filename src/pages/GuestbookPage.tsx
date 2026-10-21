@@ -6,6 +6,7 @@ import { claimHessxlAdmin, isCurrentArchiveAdmin } from '../features/community/a
 import type { CommunityMedia, GuestbookPost } from '../features/community/types'
 import GuestbookComposer from '../components/community/GuestbookComposer'
 import GuestbookReportDialog from '../components/community/GuestbookReportDialog'
+import ModerationReasonDialog from '../components/community/ModerationReasonDialog'
 import TurnstileWidget from '../components/security/TurnstileWidget'
 import './CommunityPages.css'
 
@@ -30,6 +31,10 @@ function GuestbookPage() {
   const [reportTarget, setReportTarget] = useState<GuestbookPost | null>(null)
   const [reportDetails, setReportDetails] = useState('')
   const [reportDialogStep, setReportDialogStep] = useState<'form' | 'success'>('form')
+  const [moderationTarget, setModerationTarget] = useState<GuestbookPost | null>(null)
+  const [moderationError, setModerationError] = useState('')
+  const [moderationSuccess, setModerationSuccess] = useState('')
+  const [moderationSubmitting, setModerationSubmitting] = useState(false)
   const editConsentCheckboxRef = useRef<HTMLInputElement>(null)
 
   const loadPosts = useCallback(async (nextPage = 0, append = false) => {
@@ -111,14 +116,9 @@ function GuestbookPage() {
   async function removePost(post: GuestbookPost) {
     const moderatingAnotherUsersPost = isAdmin && !post.is_mine
     if (moderatingAnotherUsersPost) {
-      const reason = window.prompt('작성자에게 표시할 숨김 사유를 입력해 주세요. (최대 1000자)')?.trim()
-      if (!reason) return
-      if (reason.length > 1000) { setMessage('숨김 사유는 1000자 이내로 입력해 주세요.'); return }
-      try {
-        await hideCommunityContent('guestbook', post.id, reason)
-        await loadPosts()
-        setMessage('글을 숨겼습니다. 작성자는 내 게시글에서 7일 안에 이의제기할 수 있습니다.')
-      } catch (error) { setMessage(error instanceof Error ? error.message : '글을 숨기지 못했습니다.') }
+      setModerationTarget(post)
+      setModerationError('')
+      setModerationSuccess('')
       return
     }
     if (!window.confirm('이 글과 첨부 사진을 영구 삭제할까요? 삭제한 글과 신고 기록은 복구할 수 없습니다.')) return
@@ -126,6 +126,28 @@ function GuestbookPage() {
       await deleteCommunityContent('guestbook', post.id)
       await loadPosts()
     } catch (error) { setMessage(error instanceof Error ? error.message : '글을 삭제하지 못했습니다.') }
+  }
+
+  async function submitHideReason(reason: string) {
+    if (!moderationTarget) return
+    setModerationSubmitting(true)
+    setModerationError('')
+    try {
+      await hideCommunityContent('guestbook', moderationTarget.id, reason)
+      void loadPosts()
+      setModerationSuccess('작성자는 내 게시글에서 7일 안에 이의제기할 수 있습니다.')
+    } catch (error) {
+      setModerationError(error instanceof Error ? error.message : '글을 숨기지 못했습니다.')
+    } finally {
+      setModerationSubmitting(false)
+    }
+  }
+
+  function closeModerationDialog() {
+    if (moderationSubmitting) return
+    setModerationTarget(null)
+    setModerationError('')
+    setModerationSuccess('')
   }
 
   async function removePhoto(media: CommunityMedia) {
@@ -252,6 +274,14 @@ function GuestbookPage() {
         onSubmit={(event) => void submitReport(event)}
         onClose={closeReportDialog}
       />
+      {moderationTarget && <ModerationReasonDialog
+        subjectLabel="방명록"
+        submitting={moderationSubmitting}
+        error={moderationError}
+        successMessage={moderationSuccess}
+        onSubmit={(reason) => void submitHideReason(reason)}
+        onClose={closeModerationDialog}
+      />}
     </section>
   )
 }
