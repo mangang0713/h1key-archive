@@ -1,4 +1,6 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { deleteCommunityContent, deleteCommunityMedia, signedMedia, allowMediaRequest, uploadImage } from './media.ts'
+import { attachModerationDetails, purgeExpiredCommunityContent, safeSecretEquals } from './moderation.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -135,253 +137,6 @@ function text(value: unknown, max: number) {
   return result
 }
 
-async function removeMediaForContent(client: SupabaseClient, contentType: string, contentId: string) {
-  const key = contentType === 'guestbook' ? 'guestbook_post_id' : 'schedule_review_id'
-  const { data: media, error } = await client.from('community_media').select('id, owner_id, object_path, byte_size').eq(key, contentId)
-  if (error) throw new Error('첨부 사진 정보를 읽을 수 없습니다.')
-  if (!media?.length) return
-  const paths = media.map((item) => item.object_path)
-  const { error: storageError } = await client.storage.from('community-images').remove(paths)
-  if (storageError) throw new Error('첨부 사진 파일을 지우지 못했습니다.')
-  const { error: removeRecordsError } = await client.rpc('remove_community_media_records', {
-    p_media_ids: media.map((item) => item.id),
-  })
-  if (removeRecordsError) throw new Error('사진 사용량과 첨부 기록을 함께 갱신하지 못했습니다.')
-}
-
-async function permanentlyDeleteCommunityContent(client: SupabaseClient, contentType: string, contentId: string) {
-  await removeMediaForContent(client, contentType, contentId)
-  const { data, error } = await client.rpc('purge_community_content_record', {
-    p_content_type: contentType,
-    p_content_id: contentId,
-    p_required_status: null,
-  })
-  if (error || !data) throw new Error('게시물과 관련 기록을 완전히 삭제하지 못했습니다.')
-}
-
-async function attachModerationDetails(client: SupabaseClient, items: Array<Record<string, unknown>>) {
-  if (!items.length) return items
-  const ids = items.map((item) => String(item.id))
-  const { data: appeals, error: appealError } = await client.from('content_appeals')
-    .select('id, content_type, content_id, reason, status, submitted_at, decided_at, decision_reason')
-    .in('content_id', ids).order('submitted_at', { ascending: false })
-  if (appealError) throw new Error('이의제기 정보를 불러오지 못했습니다.')
-  const latestAppealByContent = new Map<string, (typeof appeals)[number]>()
-  for (const appeal of appeals ?? []) {
-    const key = `${appeal.content_type}:${appeal.content_id}`
-    if (!latestAppealByContent.has(key)) latestAppealByContent.set(key, appeal)
-  }
-
-  const mediaRows: Array<{ id: string; object_path: string; byte_size: number; mediaContentType: string; parentType: 'guestbook' | 'review'; parentId: string }> = []
-  const guestbookIds = items.filter((item) => item.content_type === 'guestbook').map((item) => String(item.id))
-  const reviewIds = items.filter((item) => item.content_type === 'review').map((item) => String(item.id))
-  if (guestbookIds.length) {
-    const { data, error } = await client.from('community_media')
-      .select('id, object_path, byte_size, content_type, guestbook_post_id').in('guestbook_post_id', guestbookIds)
-    if (error) throw new Error('게시물 사진 정보를 불러오지 못했습니다.')
-    mediaRows.push(...(data ?? []).map((item) => ({ id: item.id, object_path: item.object_path, byte_size: item.byte_size, mediaContentType: item.content_type, parentType: 'guestbook' as const, parentId: item.guestbook_post_id })))
-  }
-  if (reviewIds.length) {
-    const { data, error } = await client.from('community_media')
-      .select('id, object_path, byte_size, content_type, schedule_review_id').in('schedule_review_id', reviewIds)
-    if (error) throw new Error('게시물 사진 정보를 불러오지 못했습니다.')
-    mediaRows.push(...(data ?? []).map((item) => ({ id: item.id, object_path: item.object_path, byte_size: item.byte_size, mediaContentType: item.content_type, parentType: 'review' as const, parentId: item.schedule_review_id })))
-  }
-
-  const result = items.map((item) => ({
-    ...item,
-    appeal: latestAppealByContent.get(`${item.content_type}:${item.id}`) ?? null,
-    media: [] as Array<Record<string, unknown>>,
-  }))
-  await Promise.all(mediaRows.map(async (media) => {
-    const parent = result.find((item) => item.id === media.parentId && item.content_type === media.parentType)
-    if (!parent) return
-    const { data } = await client.storage.from('community-images').createSignedUrl(String(media.object_path), 300)
-    if (data?.signedUrl) parent.media.push({ id: media.id, byte_size: media.byte_size, content_type: media.mediaContentType, signed_url: data.signedUrl })
-  }))
-  return result
-}
-
-function safeSecretEquals(received: string, expected: string) {
-  if (!received || !expected || received.length !== expected.length) return false
-  let difference = 0
-  for (let index = 0; index < received.length; index += 1) difference |= received.charCodeAt(index) ^ expected.charCodeAt(index)
-  return difference === 0
-}
-
-async function purgeExpiredCommunityContent(client: SupabaseClient) {
-  const now = new Date().toISOString()
-  const [guestbookResult, reviewResult] = await Promise.all([
-    client.from('guestbook_posts').select('id, purge_after').eq('status', 'hidden').lte('purge_after', now).order('purge_after').limit(50),
-    client.from('schedule_reviews').select('id, purge_after').eq('status', 'hidden').lte('purge_after', now).order('purge_after').limit(50),
-  ])
-  if (guestbookResult.error || reviewResult.error) throw new Error('만료된 숨김 게시물을 확인하지 못했습니다.')
-  const candidates = [
-    ...(guestbookResult.data ?? []).map((item) => ({ ...item, content_type: 'guestbook' as const })),
-    ...(reviewResult.data ?? []).map((item) => ({ ...item, content_type: 'review' as const })),
-  ]
-  if (!candidates.length) return { purged: 0, waitingForAppeal: 0 }
-
-  const { data: pendingAppeals, error: pendingError } = await client.from('content_appeals')
-    .select('content_type, content_id').eq('status', 'pending').in('content_id', candidates.map((item) => item.id))
-  if (pendingError) throw new Error('진행 중인 이의제기를 확인하지 못했습니다.')
-  const pendingKeys = new Set((pendingAppeals ?? []).map((appeal) => `${appeal.content_type}:${appeal.content_id}`))
-  let purged = 0
-  let failed = 0
-  for (const item of candidates) {
-    if (pendingKeys.has(`${item.content_type}:${item.id}`)) continue
-    try {
-      const { data: claimed, error: claimError } = await client.rpc('claim_expired_community_content_for_purge', {
-        p_content_type: item.content_type,
-        p_content_id: item.id,
-      })
-      if (claimError) throw new Error('영구 삭제 작업을 시작하지 못했습니다.')
-      if (!claimed) continue
-      await removeMediaForContent(client, item.content_type, item.id)
-      const { data: removed, error: purgeError } = await client.rpc('purge_community_content_record', {
-        p_content_type: item.content_type,
-        p_content_id: item.id,
-        p_required_status: 'purging',
-      })
-      if (purgeError || !removed) throw new Error('만료된 게시물을 최종 삭제하지 못했습니다.')
-      purged += 1
-    } catch (error) {
-      failed += 1
-      console.error('Expired community content purge failed', item.content_type, item.id, error)
-      await client.rpc('release_community_content_purge_claim', { p_content_type: item.content_type, p_content_id: item.id })
-    }
-  }
-  return { purged, waitingForAppeal: pendingKeys.size, failed }
-}
-
-async function signedMedia(client: SupabaseClient, ids: unknown) {
-  const current = await settings(client)
-  if (!current.media_views_enabled) throw new Error('사진 열람을 잠시 중단했습니다.')
-  if (!Array.isArray(ids) || ids.length > 36 || ids.some((id) => typeof id !== 'string')) throw new Error('사진 요청 형식이 올바르지 않습니다.')
-  const uniqueIds = [...new Set(ids as string[])]
-  if (uniqueIds.length === 0) return { urls: [] }
-  const { data: media, error } = await client.from('community_media').select('id, object_path, guestbook_post_id, schedule_review_id').in('id', uniqueIds)
-  if (error) throw new Error('사진 정보를 불러오지 못했습니다.')
-  const urls = []
-  for (const item of media ?? []) {
-    let published = false
-    if (item.guestbook_post_id) {
-      const { data } = await client.from('guestbook_posts').select('status').eq('id', item.guestbook_post_id).maybeSingle()
-      published = data?.status === 'published'
-    } else if (item.schedule_review_id) {
-      const { data } = await client.from('schedule_reviews').select('status').eq('id', item.schedule_review_id).maybeSingle()
-      published = data?.status === 'published'
-    }
-    if (!published) continue
-    const { data, error: signError } = await client.storage.from('community-images').createSignedUrl(item.object_path, 300)
-    if (!signError && data?.signedUrl) urls.push({ id: item.id, signedUrl: data.signedUrl })
-  }
-  return { urls }
-}
-
-async function allowMediaRequest(request: Request, client: SupabaseClient) {
-  const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-  const ip = request.headers.get('cf-connecting-ip') ?? forwardedFor ?? 'unknown-client'
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ip))
-  const ipHash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
-  const { data, error } = await client.rpc('consume_public_media_rate_limit', {
-    p_ip_hash: ipHash,
-    p_limit: 50,
-    p_window_seconds: 60,
-  })
-  if (error) throw new Error('사진 요청 제한을 확인하지 못했습니다.')
-  return Boolean(data)
-}
-
-async function deleteCommunityContent(client: SupabaseClient, contentType: string, contentId: string, userId: string) {
-  const table = contentType === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
-  const { data: post, error: ownershipError } = await client.from(table).select('id, user_id, status').eq('id', contentId).maybeSingle()
-  if (ownershipError || !post) throw new Error('게시물을 찾지 못했습니다.')
-  if (post.user_id !== userId) throw new Error('본인 게시물만 영구 삭제할 수 있습니다. 관리자 조치는 숨김 처리와 이의제기를 이용해 주세요.')
-  if (post.status !== 'published') throw new Error('숨김 검토 중인 게시물은 이의제기 기간이 끝날 때까지 직접 삭제할 수 없습니다.')
-  await permanentlyDeleteCommunityContent(client, contentType, contentId)
-}
-
-async function deleteCommunityMedia(client: SupabaseClient, mediaId: string, userId: string) {
-  const { data: media, error: mediaError } = await client.from('community_media')
-    .select('id, owner_id, object_path, byte_size, guestbook_post_id, schedule_review_id').eq('id', mediaId).maybeSingle()
-  if (mediaError || !media) throw new Error('첨부 사진을 찾지 못했습니다.')
-  if (media.owner_id !== userId && !await isAdmin(client, userId)) {
-    throw new Error('본인 사진만 삭제할 수 있습니다.')
-  }
-  if (media.guestbook_post_id) {
-    const { data } = await client.from('guestbook_posts').select('status').eq('id', media.guestbook_post_id).maybeSingle()
-    if (data?.status === 'hidden') throw new Error('숨김 검토 기간에는 게시물과 사진을 보존합니다.')
-  }
-  if (media.schedule_review_id) {
-    const { data } = await client.from('schedule_reviews').select('status').eq('id', media.schedule_review_id).maybeSingle()
-    if (data?.status === 'hidden') throw new Error('숨김 검토 기간에는 게시물과 사진을 보존합니다.')
-  }
-  const { error: storageError } = await client.storage.from('community-images').remove([media.object_path])
-  if (storageError) throw new Error('첨부 사진 파일을 지우지 못했습니다.')
-  if (media.owner_id) {
-    const { error: quotaError } = await client.rpc('release_community_media', { p_user_id: media.owner_id, p_byte_size: media.byte_size })
-    if (quotaError) throw new Error('사진 사용량을 갱신하지 못했습니다.')
-  }
-  const { error: deleteError } = await client.from('community_media').delete().eq('id', media.id)
-  if (deleteError) throw new Error('첨부 사진 기록을 지우지 못했습니다.')
-}
-
-async function uploadImage(request: Request, userId: string, client: SupabaseClient, form: FormData) {
-  const current = await assertCommunityEnabled(client)
-  await requireCommunityTerms(client, userId)
-  if (!current.uploads_enabled) throw new Error('사진 업로드를 잠시 중단했습니다.')
-  await takeLimit(client, userId, 'upload-image', 6, 3600)
-  const parentType = form.get('parentType')
-  const parentId = form.get('parentId')
-  const file = form.get('file')
-  if ((parentType !== 'guestbook' && parentType !== 'review') || typeof parentId !== 'string' || !(file instanceof File)) {
-    throw new Error('사진 업로드 정보가 올바르지 않습니다.')
-  }
-  if (file.size < 1 || file.size > 1048576 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    throw new Error('JPG, PNG, WebP 사진을 장당 1MB 이하로 올려 주세요.')
-  }
-  const buffer = new Uint8Array(await file.arrayBuffer())
-  const jpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
-  const png = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47
-  const webp = new TextDecoder().decode(buffer.slice(0, 4)) === 'RIFF' && new TextDecoder().decode(buffer.slice(8, 12)) === 'WEBP'
-  if (!(file.type === 'image/jpeg' && jpeg) && !(file.type === 'image/png' && png) && !(file.type === 'image/webp' && webp)) {
-    throw new Error('파일 내용과 이미지 형식이 일치하지 않습니다.')
-  }
-  const parentTable = parentType === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
-  const parentKey = parentType === 'guestbook' ? 'guestbook_post_id' : 'schedule_review_id'
-  const { data: parent, error: parentError } = await client.from(parentTable).select('id').eq('id', parentId).eq('user_id', userId).eq('status', 'published').maybeSingle()
-  if (parentError || !parent) throw new Error('사진을 연결할 본인 게시물을 찾지 못했습니다.')
-  const { count } = await client.from('community_media').select('id', { count: 'exact', head: true }).eq(parentKey, parentId)
-  if ((count ?? 0) >= 3) throw new Error('게시물당 사진은 최대 3장까지 첨부할 수 있습니다.')
-  const { data: reservationId, error: reserveError } = await client.rpc('reserve_community_media', { p_user_id: userId, p_byte_size: file.size })
-  if (reserveError || !reservationId) throw new Error('사진 저장 한도에 도달했거나 업로드가 잠시 중단되었습니다.')
-  const extension = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp'
-  const objectPath = `${userId}/${crypto.randomUUID()}.${extension}`
-  const { error: uploadError } = await client.storage.from('community-images').upload(objectPath, file, {
-    contentType: file.type,
-    cacheControl: '300',
-    upsert: false,
-  })
-  if (uploadError) {
-    await client.rpc('release_community_media_reservation', { p_reservation_id: reservationId })
-    throw new Error('사진 파일을 저장하지 못했습니다.')
-  }
-  const { data: mediaId, error: finalizeError } = await client.rpc('finalize_community_media', {
-    p_reservation_id: reservationId,
-    p_object_path: objectPath,
-    p_content_type: file.type,
-    p_parent_type: parentType,
-    p_parent_id: parentId,
-  })
-  if (finalizeError || !mediaId) {
-    await client.storage.from('community-images').remove([objectPath])
-    await client.rpc('release_community_media_reservation', { p_reservation_id: reservationId })
-    throw new Error('사진 한도 예약을 확정하지 못했습니다.')
-  }
-  return { mediaId }
-}
-
 Deno.serve(async (request) => {
   const origin = request.headers.get('Origin')
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(origin) })
@@ -397,7 +152,7 @@ Deno.serve(async (request) => {
     const action = form?.get('action') ?? rawBody.action
     if (action === 'signed-media') {
       if (!await allowMediaRequest(request, admin)) return respond({ error: '사진 요청이 너무 많습니다. 잠시 뒤 다시 시도해 주세요.' }, 429, origin)
-      return respond(await signedMedia(admin, rawBody.mediaIds), 200, origin)
+      return respond(await signedMedia(admin, rawBody.mediaIds, settings), 200, origin)
     }
     if (action === 'purge-expired-content') {
       const expectedSecret = Deno.env.get('COMMUNITY_PURGE_SECRET') ?? ''
@@ -412,7 +167,7 @@ Deno.serve(async (request) => {
       return respond({ accepted: true, version: communityTermsVersion }, 200, origin)
     }
     if (form && action === 'upload-image') {
-      return respond(await uploadImage(request, user.id, admin, form), 200, origin)
+      return respond(await uploadImage(request, user.id, admin, form, { assertCommunityEnabled, requireCommunityTerms, takeLimit }), 200, origin)
     }
     const adminClient = admin
     const userId = user.id
@@ -589,7 +344,7 @@ Deno.serve(async (request) => {
     }
     if (action === 'delete-media') {
       await takeLimit(adminClient, userId, 'delete-media', 20, 3600)
-      await deleteCommunityMedia(adminClient, text(rawBody.mediaId, 100), userId)
+      await deleteCommunityMedia(adminClient, text(rawBody.mediaId, 100), userId, isAdmin)
       return respond({ deleted: true }, 200, origin)
     }
     if (action === 'report-content') {
