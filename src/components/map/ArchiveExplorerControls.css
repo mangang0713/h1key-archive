@@ -6,18 +6,18 @@
   box-sizing: border-box;
   width: min(224px, calc(100vw - 24px));
   padding: 10px;
-  border: 1px solid rgb(255 255 255 / 18%);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: rgb(20 28 45 / 92%);
-  color: #f8fafc;
-  box-shadow: 0 8px 24px rgb(15 23 42 / 28%);
+  background: rgb(255 255 255 / 94%);
+  color: var(--color-text);
+  box-shadow: 0 8px 24px rgb(35 50 36 / 18%);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 
 .archive-explorer-title {
   margin: 0 0 5px 8px;
-  color: #cbd5e1;
+  color: var(--color-muted);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -48,7 +48,7 @@
 
 .archive-explorer-action:hover,
 .archive-explorer-action[aria-expanded="true"] {
-  background: rgb(255 255 255 / 10%);
+  background: var(--color-section);
 }
 
 .archive-explorer-icon {
@@ -60,19 +60,24 @@
   border-radius: 10px;
 }
 
+.archive-explorer-icon-time {
+  background: var(--color-section);
+  color: var(--color-brand-green);
+}
+
 .archive-explorer-icon-region {
-  background: rgb(var(--brand-lime-rgb) / 20%);
-  color: var(--color-brand-lime);
+  background: rgb(var(--brand-lime-rgb) / 38%);
+  color: var(--color-brand-green);
 }
 
 .archive-explorer-icon-video {
-  background: rgb(45 212 191 / 16%);
-  color: #5eead4;
+  background: rgb(45 212 191 / 12%);
+  color: #0f766e;
 }
 
 .archive-explorer-icon-data {
-  background: rgb(96 165 250 / 16%);
-  color: #93c5fd;
+  background: rgb(96 165 250 / 12%);
+  color: #2563eb;
 }
 
 .archive-explorer-icon svg {
@@ -93,10 +98,10 @@
 
 .archive-explorer-count {
   padding: 3px 7px;
-  border: 1px solid rgb(255 255 255 / 12%);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: rgb(255 255 255 / 9%);
-  color: #e2e8f0;
+  background: var(--color-section);
+  color: var(--color-muted);
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
@@ -127,7 +132,7 @@
 }
 
 .archive-explorer-action:focus-visible {
-  outline: 3px solid #fff;
+  outline: 3px solid var(--color-brand-green);
   outline-offset: 2px;
 }
 

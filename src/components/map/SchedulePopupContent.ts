@@ -1,4 +1,5 @@
 import { songs } from '../../data/songs'
+import { getSongPerformanceNumber } from '../../data/songStats'
 import type { Location, Schedule } from '../../types/archive'
 import { renderPhotoGallery } from '../media/photoGallery'
 import { preloadXWidgets, renderXPostEmbeds } from '../media/xPostEmbeds'
@@ -7,11 +8,89 @@ import './SchedulePopupContent.css'
 
 const songsById = new Map(songs.map((song) => [song.id, song]))
 
+export type SchedulePopupReaction = { likeCount: number; liked: boolean }
+
+type LikeControl = {
+  element: HTMLDivElement
+  setReaction: (reaction: SchedulePopupReaction | null) => void
+}
+
+function createScheduleLikeControl(
+  schedule: Schedule,
+  isAuthenticated: boolean,
+  onToggleLike: (scheduleId: string, current: SchedulePopupReaction) => Promise<SchedulePopupReaction>,
+  signal: AbortSignal,
+  compact = false,
+): LikeControl {
+  const element = document.createElement('div')
+  element.className = `schedule-like-control${compact ? ' is-compact' : ''}`
+  const control = document.createElement(isAuthenticated ? 'button' : 'a')
+  control.className = 'schedule-like-button'
+  control.textContent = '♡ —'
+  control.setAttribute('aria-label', '좋아요 수를 불러오는 중')
+  if (control instanceof HTMLButtonElement) {
+    control.type = 'button'
+    control.disabled = true
+  } else {
+    control.href = '#/account?returnTo=%2Farchive'
+    control.title = '로그인 후 좋아요에 참여할 수 있어요.'
+  }
+  const status = document.createElement('span')
+  status.className = 'schedule-like-status'
+  if (!isAuthenticated) status.textContent = '로그인 후 참여'
+  element.append(control, status)
+
+  let reaction: SchedulePopupReaction | null = null
+  let pending = false
+  const setReaction = (next: SchedulePopupReaction | null) => {
+    reaction = next
+    if (!reaction) {
+      control.textContent = '♡ —'
+      control.setAttribute('aria-label', '좋아요 수를 불러오지 못했습니다')
+      if (control instanceof HTMLButtonElement) control.disabled = true
+      status.textContent = '좋아요를 불러오지 못했습니다.'
+      return
+    }
+    control.textContent = `${reaction.liked ? '♥' : '♡'} ${reaction.likeCount}`
+    control.setAttribute('aria-label', isAuthenticated
+      ? `${reaction.liked ? '좋아요 취소' : '좋아요'} · 현재 ${reaction.likeCount}개`
+      : `현재 좋아요 ${reaction.likeCount}개 · 로그인하고 참여하기`)
+    if (control instanceof HTMLButtonElement) {
+      control.disabled = false
+      control.setAttribute('aria-pressed', String(reaction.liked))
+    }
+    status.textContent = isAuthenticated ? '' : '로그인 후 참여'
+  }
+
+  if (control instanceof HTMLButtonElement) {
+    control.addEventListener('click', () => {
+      if (!reaction || pending) return
+      pending = true
+      control.disabled = true
+      status.textContent = '반영 중…'
+      void onToggleLike(schedule.id, reaction).then((next) => {
+        if (signal.aborted) return
+        setReaction(next)
+      }).catch(() => {
+        if (signal.aborted) return
+        status.textContent = '반영하지 못했습니다. 다시 시도해 주세요.'
+      }).finally(() => {
+        pending = false
+        if (!signal.aborted && reaction) control.disabled = false
+      })
+    }, { signal })
+  }
+
+  return { element, setReaction }
+}
+
 type PopupContentOptions = {
   location: Location
   schedules: Schedule[] // ArchiveMap에서 날짜·당일 순서로 정렬된 목록
   selected?: Schedule
   signal: AbortSignal
+  isAuthenticated: boolean
+  onToggleLike: (scheduleId: string, current: SchedulePopupReaction) => Promise<SchedulePopupReaction>
   onSelect: (schedule: Schedule) => void
   onBack: () => void
   onClose: () => void
@@ -19,7 +98,7 @@ type PopupContentOptions = {
 
 // MapLibre setDOMContent()에 전달할 DOM만 생성합니다. 지도나 카메라는 관리하지 않습니다.
 export function createSchedulePopupContent(options: PopupContentOptions) {
-  const { location, schedules, selected, signal, onSelect, onBack, onClose } = options
+  const { location, schedules, selected, signal, isAuthenticated, onToggleLike, onSelect, onBack, onClose } = options
   const content = document.createElement('section')
   content.className = 'schedule-popup'
   content.addEventListener('click', (event) => event.stopPropagation(), { signal })
@@ -64,6 +143,12 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     content.append(notice)
   }
   let focusTarget: HTMLElement = heading
+  const likeControls = new Map<string, LikeControl>()
+  const createLikeControlForSchedule = (schedule: Schedule, compact = false) => {
+    const likeControl = createScheduleLikeControl(schedule, isAuthenticated, onToggleLike, signal, compact)
+    likeControls.set(schedule.id, likeControl)
+    return likeControl.element
+  }
 
   if (selected) {
     if (selected.media?.xPosts?.length) preloadXWidgets()
@@ -76,7 +161,9 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     panelContainer.className = 'schedule-tab-panels'
     const baseTabs = [
       { id: 'info', label: '행사 정보' },
-      ...(selected.setlist.length > 0 ? [{ id: 'setlist', label: '세트리스트' }] : []),
+      ...(selected.eventFormat !== 'online' && (selected.setlist.length > 0 || selected.setlistStatus === 'none')
+        ? [{ id: 'setlist', label: '세트리스트' }]
+        : []),
       ...(selected.media?.photos?.length
         ? [{ id: 'photos', label: `사진 ${selected.media.photos.length}` }]
         : []),
@@ -141,32 +228,37 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
       details.append(row)
     }
     infoPanel.append(details)
+    infoPanel.append(createLikeControlForSchedule(selected))
 
     const setlistPanel = panels.get('setlist')
     if (setlistPanel) {
       const setlistStatus = document.createElement('p')
       setlistStatus.className = 'schedule-setlist-status'
-      if (selected.setlistStatus === 'known' || selected.setlistStatus === 'partial' || selected.setlistStatus === 'provisional') {
-        const statusText = {
-          known: '확인 완료 · 공연 순서',
-          partial: '일부 확인 · 확인된 곡만 표시',
-          provisional: '임시 입력 · 실제 세트리스트 확인 필요',
-        } as const
-        setlistStatus.textContent = statusText[selected.setlistStatus]
+      if (selected.setlistStatus === 'none') {
+        setlistStatus.textContent = '행사에서 진행된 곡이 없습니다.'
+        setlistPanel.append(setlistStatus)
+      } else if (selected.setlist.length > 0) {
         const setlist = document.createElement('ol')
         setlist.className = 'schedule-setlist'
         selected.setlist.forEach((songId, index) => {
           const item = document.createElement('li')
           item.value = index + 1
           const song = songsById.get(songId)
-          item.textContent = song ? song.title : `곡 정보 오류: 존재하지 않는 songId (${songId})`
+          const title = document.createElement('span')
+          title.className = 'schedule-song-title'
+          title.textContent = song ? song.title : `곡 정보 오류: 존재하지 않는 songId (${songId})`
+          item.append(title)
+          const performanceNumber = getSongPerformanceNumber(songId, selected.id)
+          if (song && performanceNumber !== undefined) {
+            const count = document.createElement('span')
+            count.className = 'schedule-song-count'
+            count.textContent = `기록상 ${performanceNumber}번째 무대`
+            item.append(count)
+          }
           if (!song) item.className = 'schedule-data-error'
           setlist.append(item)
         })
-        setlistPanel.append(setlistStatus, setlist)
-      } else {
-        setlistStatus.textContent = selected.setlistStatus === 'unknown' ? '세트리스트를 아직 확인하지 못했습니다.' : '이 행사에서는 곡 공연이 없었습니다.'
-        setlistPanel.append(setlistStatus)
+        setlistPanel.append(setlist)
       }
     }
 
@@ -275,7 +367,7 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     const communityLink = document.createElement('a')
     communityLink.className = 'schedule-community-link'
     communityLink.href = `#/schedule/${encodeURIComponent(selected.id)}`
-    communityLink.textContent = '좋아요와 후기 보기'
+    communityLink.textContent = '후기 보기'
     content.append(communityLink)
   } else {
     const listBody = document.createElement('div')
@@ -283,6 +375,7 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
     const list = document.createElement('ul')
     for (const schedule of schedules) {
       const item = document.createElement('li')
+      item.className = 'schedule-choice-row'
       const choice = document.createElement('button')
       choice.type = 'button'
       choice.className = 'schedule-choice'
@@ -291,22 +384,31 @@ export function createSchedulePopupContent(options: PopupContentOptions) {
       date.textContent = schedule.date.slice(5).replace('-', '.')
       const title = document.createElement('strong')
       title.textContent = schedule.title
-      choice.append(date, title)
+      const choiceDetails = document.createElement('span')
+      choiceDetails.className = 'schedule-choice-details'
+      choiceDetails.append(date, title)
       if (schedule.startTime !== undefined) {
         const time = document.createElement('span')
         time.textContent = schedule.startTime
-        choice.append(time)
+        choiceDetails.append(time)
       }
+      choice.append(choiceDetails)
       choice.addEventListener('click', (event) => {
         event.stopPropagation()
         onSelect(schedule)
       }, { signal })
       if (focusTarget === heading) focusTarget = choice
-      item.append(choice)
+      item.append(choice, createLikeControlForSchedule(schedule, true))
       list.append(item)
     }
     listBody.append(list)
     content.append(listBody)
   }
-  return { content, focusTarget }
+  return {
+    content,
+    focusTarget,
+    updateReactions(reactions: Map<string, SchedulePopupReaction | null>) {
+      reactions.forEach((reaction, scheduleId) => likeControls.get(scheduleId)?.setReaction(reaction))
+    },
+  }
 }

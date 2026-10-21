@@ -28,6 +28,9 @@ import {
 import { createRegionNavigationController } from './regionNavigationController'
 import { schedules } from '../../data/schedules'
 import type { CountryCode, Schedule } from '../../types/archive'
+import { useAuth } from '../../features/auth/AuthProvider'
+import { getScheduleReactions, toggleScheduleLike } from '../../features/community/api'
+import type { SchedulePopupReaction } from './SchedulePopupContent'
 
 setWorkerUrl(workerUrl)
 
@@ -38,7 +41,9 @@ const CAMERA_DURATION = 450
 type SavedCamera = { center: [number, number]; zoom: number; bearing: number; pitch: number }
 
 function ArchiveMap() {
+  const { user } = useAuth()
   const mapContainerRef = useRef<HTMLDivElement>(null)
+  const currentUserIdRef = useRef<string | undefined>(user?.id)
   const homeButtonRef = useRef<HTMLButtonElement>(null)
   const locationlessButtonRef = useRef<HTMLButtonElement>(null)
   const regionNavigationButtonRef = useRef<HTMLButtonElement>(null)
@@ -69,6 +74,8 @@ function ArchiveMap() {
     scheduleCount: region.scheduleCount,
   }))
   const activeTimeTravelSchedule = timeTravelIndex === null ? undefined : timeTravelSchedules[timeTravelIndex]
+
+  useEffect(() => { currentUserIdRef.current = user?.id }, [user?.id])
 
   useEffect(() => {
     if (!timeTravelOpen || !activeTimeTravelSchedule) return
@@ -173,6 +180,8 @@ function ArchiveMap() {
       },
     })
     let popupEvents: AbortController | undefined
+    const reactionCache = new Map<string, { reaction: SchedulePopupReaction; expiresAt: number }>()
+    const reactionCacheKey = (userId: string | undefined, scheduleId: string) => `${userId ?? 'anonymous'}:${scheduleId}`
     const clearPopupEvents = () => {
       popupEvents?.abort()
       popupEvents = undefined
@@ -215,15 +224,59 @@ function ArchiveMap() {
       popupEvents = new AbortController()
       const signal = popupEvents.signal
       const locationSchedules = schedulesByLocation.get(location.id) ?? []
-      const { content, focusTarget } = createSchedulePopupContent({
+      const reactionUserId = currentUserIdRef.current
+      const reactionSchedules = selected ? [selected] : locationSchedules
+      const { content, focusTarget, updateReactions } = createSchedulePopupContent({
         location,
         schedules: locationSchedules,
         selected,
         signal,
+        isAuthenticated: Boolean(reactionUserId),
+        onToggleLike: async (scheduleId, current) => {
+          const userId = currentUserIdRef.current
+          if (!userId) throw new Error('로그인 후 좋아요를 누를 수 있습니다.')
+          const result = await toggleScheduleLike(scheduleId)
+          const next = {
+            liked: result.liked,
+            likeCount: Math.max(0, current.likeCount + (result.liked ? 1 : -1)),
+          }
+          reactionCache.set(reactionCacheKey(userId, scheduleId), { reaction: next, expiresAt: Date.now() + 30_000 })
+          return next
+        },
         onSelect: (schedule) => openPopup(location, schedule),
         onBack: () => openPopup(location),
         onClose: () => popup.remove(),
       })
+      const reactions = new Map<string, SchedulePopupReaction | null>()
+      const schedulesToFetch: Schedule[] = []
+      for (const schedule of reactionSchedules) {
+        const cached = reactionCache.get(reactionCacheKey(reactionUserId, schedule.id))
+        if (cached && cached.expiresAt > Date.now()) reactions.set(schedule.id, cached.reaction)
+        else schedulesToFetch.push(schedule)
+      }
+      updateReactions(reactions)
+      if (schedulesToFetch.length > 0) {
+        void Promise.all(schedulesToFetch.map(async (schedule) => {
+          try {
+            const stats = await getScheduleReactions(schedule.id, reactionUserId)
+            return { scheduleId: schedule.id, reaction: { likeCount: stats.likeCount, liked: stats.liked } }
+          } catch {
+            return { scheduleId: schedule.id, reaction: null }
+          }
+        })).then((results) => {
+          if (signal.aborted) return
+          for (const result of results) {
+            reactions.set(result.scheduleId, result.reaction)
+            if (result.reaction) {
+              reactionCache.set(reactionCacheKey(reactionUserId, result.scheduleId), {
+                reaction: result.reaction,
+                expiresAt: Date.now() + 30_000,
+              })
+            }
+          }
+          updateReactions(reactions)
+        })
+      }
       popup.setLngLat(location.coordinates).setDOMContent(content)
       if (!popup.isOpen()) popup.addTo(map)
       // 상세 제목 또는 첫 목록 항목으로 포커스를 이동합니다.
