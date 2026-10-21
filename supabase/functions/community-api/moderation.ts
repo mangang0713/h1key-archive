@@ -14,6 +14,15 @@ export async function removeMediaForContent(client: SupabaseClient, contentType:
   if (removeRecordsError) throw new Error('사진 사용량과 첨부 기록을 함께 갱신하지 못했습니다.')
 }
 
+export async function removeStorageObjectsForContent(client: SupabaseClient, contentType: string, contentId: string) {
+  const key = contentType === 'guestbook' ? 'guestbook_post_id' : 'schedule_review_id'
+  const { data: media, error } = await client.from('community_media').select('object_path').eq(key, contentId)
+  if (error) throw new Error('첨부 사진 정보를 읽을 수 없습니다.')
+  if (!media?.length) return
+  const { error: storageError } = await client.storage.from('community-images').remove(media.map((item) => item.object_path))
+  if (storageError) throw new Error('첨부 사진 파일을 지우지 못했습니다.')
+}
+
 export async function permanentlyDeleteCommunityContent(client: SupabaseClient, contentType: string, contentId: string) {
   await removeMediaForContent(client, contentType, contentId)
   const { data, error } = await client.rpc('purge_community_content_record', {
@@ -53,7 +62,10 @@ export async function attachModerationDetails(client: SupabaseClient, items: Arr
     mediaRows.push(...(data ?? []).map((item) => ({ id: item.id, object_path: item.object_path, byte_size: item.byte_size, mediaContentType: item.content_type, parentType: 'review' as const, parentId: item.schedule_review_id })))
   }
 
-  const result = items.map((item) => ({
+  const result: Array<Record<string, unknown> & {
+    appeal: (typeof appeals)[number] | null
+    media: Array<Record<string, unknown>>
+  }> = items.map((item) => ({
     ...item,
     appeal: latestAppealByContent.get(`${item.content_type}:${item.id}`) ?? null,
     media: [] as Array<Record<string, unknown>>,
@@ -76,6 +88,9 @@ export function safeSecretEquals(received: string, expected: string) {
 
 export async function purgeExpiredCommunityContent(client: SupabaseClient) {
   const now = new Date().toISOString()
+  const { error: appealResultError } = await client.from('content_appeal_results').delete().lte('expires_at', now)
+  if (appealResultError) throw new Error('만료된 이의제기 결과 안내를 정리하지 못했습니다.')
+
   const [guestbookResult, reviewResult] = await Promise.all([
     client.from('guestbook_posts').select('id, purge_after').eq('status', 'hidden').lte('purge_after', now).order('purge_after').limit(50),
     client.from('schedule_reviews').select('id, purge_after').eq('status', 'hidden').lte('purge_after', now).order('purge_after').limit(50),

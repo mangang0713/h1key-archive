@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { deleteCommunityContent, deleteCommunityMedia, signedMedia, allowMediaRequest, uploadImage } from './media.ts'
-import { attachModerationDetails, purgeExpiredCommunityContent, safeSecretEquals } from './moderation.ts'
+import { attachModerationDetails, purgeExpiredCommunityContent, removeStorageObjectsForContent, safeSecretEquals } from './moderation.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -197,16 +197,20 @@ Deno.serve(async (request) => {
     }
     if (action === 'get-my-content') {
       await takeLimit(adminClient, userId, 'get-my-content', 60, 3600)
-      const [guestbookResult, reviewResult] = await Promise.all([
+      const [guestbookResult, reviewResult, appealResultsResult] = await Promise.all([
         adminClient.from('guestbook_posts').select('id, author_name, body, created_at, status, moderation_reason, hidden_at, purge_after').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
         adminClient.from('schedule_reviews').select('id, schedule_id, author_name, body, rating, created_at, status, moderation_reason, hidden_at, purge_after').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
+        adminClient.from('content_appeal_results').select('id, content_type, content_created_at, decision_reason, decided_at, expires_at').eq('author_id', userId).gt('expires_at', new Date().toISOString()).order('decided_at', { ascending: false }).limit(100),
       ])
-      if (guestbookResult.error || reviewResult.error) throw new Error('내 게시글을 불러오지 못했습니다.')
+      if (guestbookResult.error || reviewResult.error || appealResultsResult.error) throw new Error('내 게시글을 불러오지 못했습니다.')
       const ownContent = [
         ...(guestbookResult.data ?? []).map((item) => ({ ...item, content_type: 'guestbook' as const, schedule_id: null, rating: null })),
         ...(reviewResult.data ?? []).map((item) => ({ ...item, content_type: 'review' as const })),
       ].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 100)
-      return respond(await attachModerationDetails(adminClient, ownContent), 200, origin)
+      return respond({
+        posts: await attachModerationDetails(adminClient, ownContent),
+        appealResults: appealResultsResult.data ?? [],
+      }, 200, origin)
     }
     if (action === 'restore-hidden-content') {
       if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 숨김 게시물을 복원할 수 있습니다.')
@@ -329,18 +333,19 @@ Deno.serve(async (request) => {
       const { data: appeal, error: appealError } = await adminClient.from('content_appeals').select('*').eq('id', appealId).maybeSingle()
       if (appealError || !appeal || appeal.status !== 'pending') throw new Error('검토 대기 중인 이의제기를 찾지 못했습니다.')
       const decisionReason = decision === 'reject' ? text(rawBody.reason, 1000) : (typeof rawBody.reason === 'string' ? rawBody.reason.trim().slice(0, 1000) || null : null)
-      const now = new Date().toISOString()
-      if (decision === 'approve') {
-        const table = appeal.content_type === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
-        const { error } = await adminClient.from(table).update({ status: 'published', moderation_reason: null, hidden_at: null, purge_after: null, updated_at: now })
-          .eq('id', appeal.content_id).eq('status', 'hidden')
-        if (error) throw new Error('게시물을 복원하지 못해 이의제기를 처리하지 못했습니다.')
+      if (decision === 'reject') {
+        if (!decisionReason) throw new Error('기각 사유를 작성해 주세요.')
+        await removeStorageObjectsForContent(adminClient, appeal.content_type, appeal.content_id)
       }
-      const { error } = await adminClient.from('content_appeals').update({
-        status: decision === 'approve' ? 'approved' : 'rejected', decided_at: now, decision_reason: decisionReason,
-      }).eq('id', appealId).eq('status', 'pending')
-      if (error) throw new Error('이의제기 판정을 저장하지 못했습니다.')
-      return respond({ resolved: true, decision }, 200, origin)
+      const { data, error } = await adminClient.rpc('resolve_community_content_appeal', {
+        p_appeal_id: appealId,
+        p_decision: decision,
+        p_decision_reason: decisionReason,
+      })
+      if (error || !data) throw new Error(decision === 'approve'
+        ? '게시물을 복원하지 못해 이의제기를 처리하지 못했습니다.'
+        : '게시글과 사진을 삭제하고 결과를 저장하지 못했습니다. 다시 시도해 주세요.')
+      return respond({ resolved: true, ...data }, 200, origin)
     }
     if (action === 'delete-media') {
       await takeLimit(adminClient, userId, 'delete-media', 20, 3600)
