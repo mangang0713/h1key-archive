@@ -4,63 +4,6 @@
   height: 100dvh;
 }
 
-.cluster-marker,
-.pin-marker {
-  width: 44px;
-  height: 44px;
-  border: 2px solid #fff;
-  border-radius: 12px;
-  background: var(--color-brand-green);
-  color: #fff;
-  font: 700 16px "Pretendard Variable", Pretendard, sans-serif;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
-}
-
-.pin-marker {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.pin-marker svg {
-  display: block;
-  width: 44px;
-  height: 44px;
-  fill: #fff9e8;
-  stroke: var(--color-brand-green);
-  stroke-width: 2.5px;
-  filter: drop-shadow(0 2px 2px rgb(21 33 15 / 32%));
-}
-
-.pin-marker circle,
-.pin-marker text {
-  fill: var(--color-brand-green);
-  stroke: none;
-}
-
-.pin-marker:hover svg {
-  fill: #fff1d2;
-}
-
-.pin-marker svg {
-  position: relative;
-  z-index: 1;
-  transition: transform 180ms ease, fill 180ms ease;
-}
-
-.pin-marker.journey-active-marker svg {
-  fill: #f59e0b;
-  stroke: #fff;
-  transform: translateY(-3px) scale(1.14);
-}
-
-.pin-marker.journey-active-marker circle,
-.pin-marker.journey-active-marker text {
-  fill: var(--color-brand-green);
-}
-
 .journey-location-marker {
   display: grid;
   width: 42px;
@@ -92,34 +35,6 @@
   }
 }
 
-.cluster-marker {
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #ffe0d4 4%, #ed9a82 96%);
-  color: var(--color-text);
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 2px var(--color-brand-green), 0 3px 8px rgb(21 33 15 / 26%);
-  text-shadow: 0 1px 0 rgb(255 255 255 / 55%);
-  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-}
-
-.cluster-marker:hover {
-  background: linear-gradient(145deg, #ffe9e0 4%, #e88970 96%);
-  box-shadow: 0 0 0 2px var(--color-brand-green), 0 4px 10px rgb(21 33 15 / 34%);
-  transform: scale(1.06);
-}
-
-.cluster-marker:active {
-  transform: scale(0.96);
-}
-
-.pin-marker text {
-  font: 700 15px "Pretendard Variable", Pretendard, sans-serif;
-}
-
-.pin-marker:focus-visible,
-.cluster-marker:focus-visible,
 .map-home:focus-visible {
   outline: 3px solid var(--color-surface);
   outline-offset: 3px;
@@ -151,6 +66,10 @@
   box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
 }
 
+.map-home[hidden] {
+  display: none;
+}
+
 .map-home svg {
   width: 20px;
   height: 20px;
@@ -165,10 +84,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pin-marker svg {
-    transition: none;
-  }
-
   .journey-location-marker {
     animation: none;
   }

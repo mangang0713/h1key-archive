@@ -1,6 +1,6 @@
 ﻿import { useEffect, useRef, useState } from 'react'
-import { Map as MapLibreMap, Marker, Popup, setWorkerUrl } from 'maplibre-gl'
-import type { GeoJSONSource } from 'maplibre-gl'
+import { Map as MapLibreMap, Popup, setWorkerUrl } from 'maplibre-gl'
+import type { GeoJSONSource, MapLayerMouseEvent, MapMouseEvent } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './ArchiveMap.css'
@@ -17,7 +17,14 @@ import {
 import ArchiveExplorerControls from './ArchiveExplorerControls'
 import TimeTravelPanel from './TimeTravelPanel'
 import type { RegionNavigationOption } from './RegionNavigationPanel'
-import { createLocationMarkerElement } from './createLocationMarkerElement'
+import {
+  addLocationMarkerLayers,
+  clusterCircleLayerId,
+  clusterCountLayerId,
+  locationCountLayerId,
+  locationPinLayerId,
+  setLocationMarkerLayersVisible,
+} from './locationMarkerLayers'
 import {
   createTimeTravelController,
   JOURNEY_STOP_DELAY_MS,
@@ -122,7 +129,7 @@ function ArchiveMap() {
     let savedCamera: SavedCamera | undefined
     let selectedLocationId: string | undefined
     let selectedLocationCenter: [number, number] | undefined
-    const visibleMarkers = new Map<string, { marker: Marker; remove: () => void }>()
+    let locationMarkerLayersVisible: boolean | undefined
     let cameraRequest = 0
     const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : CAMERA_DURATION
     const discardSelection = () => {
@@ -133,13 +140,16 @@ function ArchiveMap() {
       popup.remove()
     }
     const highlightTimeTravelLocation = (locationId?: string) => {
-      for (const [key, entry] of visibleMarkers) {
-        entry.marker.getElement().classList.toggle('journey-active-marker', key === `location:${locationId}`)
+      if (!map.getSource(sourceId)) return
+      const previousLocationId = timeTravelControllerRef.current?.getActiveLocationId()
+      if (previousLocationId && previousLocationId !== locationId) {
+        map.removeFeatureState({ source: sourceId, id: previousLocationId }, 'journeyActive')
       }
+      if (locationId) map.setFeatureState({ source: sourceId, id: locationId }, { journeyActive: true })
     }
     const clearVisibleLocationMarkers = () => {
-      visibleMarkers.forEach((entry) => entry.remove())
-      visibleMarkers.clear()
+      locationMarkerLayersVisible = false
+      setLocationMarkerLayersVisible(map, false)
     }
     const timeTravelController = createTimeTravelController({
       map,
@@ -217,7 +227,19 @@ function ArchiveMap() {
       map.easeTo({ ...INITIAL_CAMERA, duration: duration() })
     }
     const homeButton = homeButtonRef.current
+    const updateHomeButtonVisibility = () => {
+      if (!homeButton) return
+      const center = map.getCenter()
+      const isInitialCamera = Math.abs(center.lng - INITIAL_CAMERA.center[0]) < 0.001
+        && Math.abs(center.lat - INITIAL_CAMERA.center[1]) < 0.001
+        && Math.abs(map.getZoom() - INITIAL_CAMERA.zoom) < 0.01
+        && Math.abs(map.getBearing() - INITIAL_CAMERA.bearing) < 0.01
+        && Math.abs(map.getPitch() - INITIAL_CAMERA.pitch) < 0.01
+      homeButton.hidden = isInitialCamera
+    }
     homeButton?.addEventListener('click', goHome)
+    map.on('moveend', updateHomeButtonVisibility)
+    updateHomeButtonVisibility()
 
     const openPopup = (location: MappedLocation, selected?: Schedule) => {
       clearPopupEvents()
@@ -313,74 +335,46 @@ function ArchiveMap() {
       openPopup(location, locationSchedules.length === 1 ? locationSchedules[0] : undefined)
     }
 
-    const updateMarkers = () => {
-      if (disposed || !map.getSource(sourceId) || !map.isSourceLoaded(sourceId)) return
-      if (timeTravelController.isRunning()) {
-        clearVisibleLocationMarkers()
+    const syncLocationMarkerVisibility = () => {
+      if (disposed || !map.getSource(sourceId)) return
+      const visible = !timeTravelController.isRunning()
+      if (visible === locationMarkerLayersVisible) return
+      locationMarkerLayersVisible = visible
+      setLocationMarkerLayersVisible(map, visible)
+    }
+    const handleMapMarkerClick = async (event: MapMouseEvent) => {
+      if (!map.getLayer(clusterCircleLayerId)) return
+      const features = map.queryRenderedFeatures(event.point, {
+        layers: [clusterCountLayerId, clusterCircleLayerId, locationCountLayerId, locationPinLayerId],
+      })
+      const feature = features.find((candidate) => Boolean(candidate.properties.cluster))
+        ?? features.find((candidate) => Boolean(candidate.properties.locationId))
+      if (!feature || feature.geometry.type !== 'Point') return
+      const coordinates = feature.geometry.coordinates as [number, number]
+      timeTravelController.stop(false)
+      const clusterId = feature.properties.cluster_id
+      if (clusterId !== undefined) {
+        const request = ++cameraRequest
+        map.stop()
+        discardSelection()
+        try {
+          const source = map.getSource(sourceId) as GeoJSONSource
+          const zoom = await source.getClusterExpansionZoom(Number(clusterId))
+          if (disposed || request !== cameraRequest) return
+          map.easeTo({ center: coordinates, zoom: Math.min(zoom, map.getMaxZoom()), duration: duration() })
+        } catch (error) {
+          if (!disposed && request === cameraRequest) console.error('장소 클러스터 확대 실패', error)
+        }
         return
       }
-      const visibleKeys = new Set<string>()
-      const bounds = map.getBounds()
-      for (const feature of map.querySourceFeatures(sourceId)) {
-        if (feature.geometry.type !== 'Point') continue
-        const coordinates: [number, number] = [feature.geometry.coordinates[0], feature.geometry.coordinates[1]]
-        if (!bounds.contains(coordinates)) continue
-        const isCluster = Boolean(feature.properties.cluster)
-        const clusterId = Number(feature.properties.cluster_id)
-        const locationId = String(feature.properties.locationId)
-        const key = isCluster ? `cluster:${clusterId}` : `location:${locationId}`
-        if (visibleKeys.has(key)) continue // 타일 경계에서 중복되는 장소·클러스터 제외
-        visibleKeys.add(key)
-        const existing = visibleMarkers.get(key)
-        if (existing) {
-          continue
-        }
-
-        const location = locationsById.get(locationId)
-        const locationSchedules = schedulesByLocation.get(locationId) ?? []
-        if (!isCluster && !location) continue
-        const count = isCluster ? Number(feature.properties.point_count) : locationSchedules.length
-        const button = createLocationMarkerElement({
-          isCluster,
-          count,
-          locationName: location?.name,
-          isActiveTimeTravelLocation: !isCluster && locationId === timeTravelController.getActiveLocationId(),
-        })
-        const events = new AbortController()
-        const selectMarker = async (event: MouseEvent) => {
-          // 새 Popup이 동일한 클릭으로 즉시 닫히는 것을 방지합니다.
-          event.stopPropagation()
-          timeTravelController.stop(false)
-          if (!isCluster) {
-            if (location) selectLocation(location)
-            return
-          }
-          const request = ++cameraRequest
-          map.stop()
-          discardSelection()
-          try {
-            const source = map.getSource(sourceId) as GeoJSONSource
-            const zoom = await source.getClusterExpansionZoom(clusterId)
-            if (disposed || events.signal.aborted || request !== cameraRequest) return
-            map.easeTo({ center: coordinates, zoom: Math.min(zoom, map.getMaxZoom()), duration: duration() })
-          } catch (error) {
-            if (!disposed && !events.signal.aborted) console.error('장소 클러스터 확대 실패', error)
-          }
-        }
-        button.addEventListener('click', selectMarker, { signal: events.signal })
-        const marker = new Marker({ element: button, anchor: isCluster ? 'center' : 'bottom' })
-          .setLngLat(coordinates).addTo(map)
-        visibleMarkers.set(key, { marker, remove: () => {
-          events.abort()
-          marker.remove()
-        } })
-      }
-      for (const [key, entry] of visibleMarkers) {
-        if (!visibleKeys.has(key)) {
-          entry.remove()
-          visibleMarkers.delete(key)
-        }
-      }
+      const location = locationsById.get(String(feature.properties.locationId))
+      if (location) selectLocation(location)
+    }
+    const setMapCursor = (event: MapLayerMouseEvent) => {
+      if (!map.getLayer(clusterCircleLayerId)) return
+      map.getCanvas().style.cursor = map.queryRenderedFeatures(event.point, {
+        layers: [clusterCountLayerId, clusterCircleLayerId, locationCountLayerId, locationPinLayerId],
+      }).length > 0 ? 'pointer' : ''
     }
 
     const addLocations = () => {
@@ -391,16 +385,13 @@ function ArchiveMap() {
         clusterRadius: 35,
         clusterMaxZoom: 14,
       })
-      // HTML 버튼 마커를 사용하되, 소스 타일은 지도 레이어를 통해 로드합니다.
-      map.addLayer({
-        id: 'archive-location-source',
-        type: 'circle',
-        source: sourceId,
-        paint: { 'circle-radius': 0, 'circle-opacity': 0 },
-      })
+      addLocationMarkerLayers(map, sourceId)
+      locationMarkerLayersVisible = true
     }
     map.on('load', addLocations)
-    map.on('render', updateMarkers)
+    map.on('render', syncLocationMarkerVisibility)
+    map.on('click', handleMapMarkerClick)
+    map.on('mousemove', setMapCursor)
     const updateCurrentRegion = () => {
       const center = map.getCenter()
       const nextRegion = nearestRegionCode([center.lng, center.lat])
@@ -415,10 +406,12 @@ function ArchiveMap() {
       homeButton?.removeEventListener('click', goHome)
       map.stop()
       map.off('load', addLocations)
-      map.off('render', updateMarkers)
+      map.off('render', syncLocationMarkerVisibility)
+      map.off('click', handleMapMarkerClick)
+      map.off('mousemove', setMapCursor)
       map.off('moveend', updateCurrentRegion)
-      visibleMarkers.forEach((entry) => entry.remove())
-      visibleMarkers.clear()
+      map.off('moveend', updateHomeButtonVisibility)
+      map.getCanvas().style.cursor = ''
       popup.remove()
       popup.off('close', closeSelection)
       clearPopupEvents()
@@ -448,7 +441,7 @@ function ArchiveMap() {
         role="region"
         aria-label="H1-KEY Activity Archive 대한민국 지도"
       />
-      <button ref={homeButtonRef} type="button" className="map-home" aria-label="처음으로: 대한민국 초기 지도" title="처음으로">
+      <button ref={homeButtonRef} type="button" className="map-home" aria-label="처음으로: 대한민국 초기 지도" title="처음으로" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3Z" /></svg>
         <span>처음으로</span>
       </button>

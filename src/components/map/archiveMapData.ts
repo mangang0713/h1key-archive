@@ -34,8 +34,12 @@ export const locationPoints: FeatureCollection<Point> = {
   type: 'FeatureCollection',
   features: mappedLocations.map((location) => ({
     type: 'Feature',
+    id: location.id,
     geometry: { type: 'Point', coordinates: location.coordinates },
-    properties: { locationId: location.id },
+    properties: {
+      locationId: location.id,
+      scheduleCount: schedulesByLocation.get(location.id)?.length ?? 0,
+    },
   })),
 }
 
