@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthProvider'
 import { getMyCommunityContent, submitCommunityAppeal } from '../features/community/api'
-import type { MyCommunityContent } from '../features/community/types'
+import type { CommunityAppealResult, MyCommunityContent } from '../features/community/types'
 import './CommunityPages.css'
 
 function formatDate(value: string | null) {
@@ -16,6 +16,7 @@ function formatDate(value: string | null) {
 function MyCommunityPostsPage() {
   const { user, loading, configured } = useAuth()
   const [posts, setPosts] = useState<MyCommunityContent[]>([])
+  const [appealResults, setAppealResults] = useState<CommunityAppealResult[]>([])
   const [appealTarget, setAppealTarget] = useState<string>()
   const [appealReason, setAppealReason] = useState('')
   const [busyId, setBusyId] = useState<string>()
@@ -26,7 +27,11 @@ function MyCommunityPostsPage() {
 
   const refresh = useCallback(async () => {
     if (!configured || !user) return
-    try { setPosts(await getMyCommunityContent()) }
+    try {
+      const content = await getMyCommunityContent()
+      setPosts(content.posts)
+      setAppealResults(content.appealResults)
+    }
     catch (error) { setMessage(error instanceof Error ? error.message : '내 게시글을 불러오지 못했습니다.') }
   }, [configured, user])
 
@@ -64,7 +69,7 @@ function MyCommunityPostsPage() {
     { id: 'all', label: '전체 게시글', count: posts.length },
     { id: 'hidden', label: '숨겨진 게시글', count: posts.filter((post) => post.status === 'hidden' || post.status === 'purging').length },
     { id: 'pending', label: '이의제기 중인 게시글', count: posts.filter((post) => post.appeal?.status === 'pending').length },
-    { id: 'results', label: '이의제기 결과', count: posts.filter((post) => post.appeal?.status === 'approved' || post.appeal?.status === 'rejected').length },
+    { id: 'results', label: '이의제기 결과', count: posts.filter((post) => post.appeal?.status === 'approved' || post.appeal?.status === 'rejected').length + appealResults.length },
   ] as const
   const visiblePosts = posts.filter((post) => {
     if (activeTab === 'hidden') return post.status === 'hidden' || post.status === 'purging'
@@ -83,7 +88,7 @@ function MyCommunityPostsPage() {
       <div className="community-heading">
         <span className="community-eyebrow">MY POSTS</span>
         <h1>내 게시글</h1>
-        <p>공개 중인 글과 관리자 조치로 숨겨진 글을 확인할 수 있습니다.</p>
+        <p>공개 중인 글, 숨겨진 글, 이의제기 결과를 확인할 수 있습니다.</p>
       </div>
       {!configured && <div className="community-alert">Supabase 설정이 필요합니다.</div>}
       {loading && <p className="community-muted">로그인 상태를 확인하고 있습니다.</p>}
@@ -131,7 +136,18 @@ function MyCommunityPostsPage() {
             </form> : <button className="secondary-button appeal-open-button" type="button" onClick={() => { setAppealTarget(post.id); setAppealReason(''); setMessage('') }}>이의제기</button> : post.status === 'hidden' && <p className="community-small">이의제기 기간이 끝났습니다. 영구 삭제 처리를 기다리는 중입니다.</p>}
           </article>
         })}
-        {visiblePosts.length === 0 && <p className="empty-state">{emptyMessages[activeTab]}</p>}
+        {activeTab === 'results' && appealResults.map((result) => <article className="user-post-card moderation-post-card" key={`appeal-result-${result.id}`}>
+          <header>
+            <strong>{result.content_type === 'guestbook' ? '방명록' : '일정 후기'} · 삭제됨</strong>
+            <time dateTime={result.content_created_at}>게시물 작성 {formatDate(result.content_created_at)}</time>
+          </header>
+          <div className="appeal-status">
+            <strong>이의제기 기각</strong>
+            <p><b>운영자 답변</b> · {result.decision_reason}</p>
+            <p>게시글과 사진은 삭제되었으며, 이 결과 안내는 {formatDate(result.expires_at)}에 삭제됩니다.</p>
+          </div>
+        </article>)}
+        {visiblePosts.length === 0 && !(activeTab === 'results' && appealResults.length > 0) && <p className="empty-state">{emptyMessages[activeTab]}</p>}
         </div>
       </>}
       {message && <p className="community-message" role="status">{message}</p>}

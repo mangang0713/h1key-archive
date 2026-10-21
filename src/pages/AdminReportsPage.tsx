@@ -116,16 +116,11 @@ function AdminReportsPage() {
     setAppealDecisionError('')
     try {
       await resolveCommunityAppeal(appeal.id, decision, reason)
-      const decidedAt = new Date().toISOString()
-      setHiddenContent((current) => decision === 'approve'
-        ? current.filter((entry) => entry.id !== item.id || entry.content_type !== item.content_type)
-        : current.map((entry) => entry.id === item.id && entry.content_type === item.content_type
-          ? { ...entry, appeal: { ...appeal, status: 'rejected', decided_at: decidedAt, decision_reason: reason || null } }
-          : entry))
+      setHiddenContent((current) => current.filter((entry) => entry.id !== item.id || entry.content_type !== item.content_type))
       void refreshHiddenContent()
       setAppealDecisionSuccess(decision === 'approve'
-        ? '숨김 게시물을 다시 공개했고, 게시물은 숨김 목록에서 제거했습니다.'
-        : '게시물은 숨김 상태로 남아 있고 기존 삭제 예정일까지 보존됩니다.')
+        ? '숨김 게시물을 다시 공개했습니다.'
+        : '게시글과 사진을 삭제했습니다. 작성자는 내 게시글에서 7일간 기각 사유를 확인할 수 있습니다.')
     } catch (error) {
       setAppealDecisionError(error instanceof Error ? error.message : '이의제기를 처리하지 못했습니다.')
     }

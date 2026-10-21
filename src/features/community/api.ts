@@ -1,4 +1,4 @@
-import type { AdminCommunitySettings, CommunityMedia, CommunitySettings, ContentReport, GuestbookPost, HiddenCommunityContent, MyCommunityContent, ScheduleReview } from './types'
+import type { AdminCommunitySettings, CommunityAppealResult, CommunityMedia, CommunitySettings, ContentReport, GuestbookPost, HiddenCommunityContent, MyCommunityContent, ScheduleReview } from './types'
 import { supabase, supabaseConfig } from '../../lib/supabase/client'
 
 const PAGE_SIZE = 12
@@ -264,7 +264,8 @@ export async function getAdminHiddenContent() {
 }
 
 export async function getMyCommunityContent() {
-  return invoke<MyCommunityContent[]>('get-my-content')
+  const response = await invoke<MyCommunityContent[] | { posts: MyCommunityContent[]; appealResults: CommunityAppealResult[] }>('get-my-content')
+  return Array.isArray(response) ? { posts: response, appealResults: [] } : response
 }
 
 export async function submitCommunityAppeal(contentType: 'guestbook' | 'review', contentId: string, reason: string) {

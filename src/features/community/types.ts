@@ -65,6 +65,15 @@ export type HiddenCommunityContent = {
 
 export type MyCommunityContent = HiddenCommunityContent
 
+export type CommunityAppealResult = {
+  id: string
+  content_type: 'guestbook' | 'review'
+  content_created_at: string
+  decision_reason: string
+  decided_at: string
+  expires_at: string
+}
+
 export type CommunitySettings = {
   community_enabled: boolean
   uploads_enabled: boolean

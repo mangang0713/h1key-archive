@@ -316,9 +316,16 @@
 }
 
 .archive-data-setlist li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px 10px;
+  flex-wrap: wrap;
   padding-left: 3px;
   overflow-wrap: anywhere;
 }
+
+.archive-data-song-count { margin-left: auto; color: var(--color-muted); font-size: 11px; font-weight: 500; white-space: nowrap; }
 
 .visually-hidden {
   position: absolute;

@@ -59,7 +59,7 @@ function AppealDecisionDialog({ decision, submitting, error, successMessage, onS
         <h2 id="appeal-decision-title">{isApproval ? '이의제기 승인' : '이의제기 기각'}</h2>
         <p>{isApproval
           ? '승인하면 숨겨진 게시물이 즉시 다시 공개됩니다. 작성자에게 남길 안내는 선택 사항입니다.'
-          : '기각하면 게시물은 숨김 상태로 유지되고, 기존 삭제 예정일에 영구 삭제됩니다. 기각 사유는 작성자에게 표시됩니다.'}</p>
+          : '기각하면 게시글과 사진이 즉시 영구 삭제됩니다. 작성자는 삭제된 게시물의 내용 없이 기각 사유를 7일간 확인할 수 있습니다.'}</p>
         <label htmlFor="appeal-decision-reason">{isApproval ? '작성자에게 남길 안내 (선택)' : '기각 사유'}</label>
         <textarea
           ref={reasonRef}
@@ -67,7 +67,7 @@ function AppealDecisionDialog({ decision, submitting, error, successMessage, onS
           value={reason}
           maxLength={1000}
           rows={4}
-          placeholder={isApproval ? '예: 이의제기를 확인해 게시물을 복원했습니다.' : '게시물을 계속 숨김 처리하는 이유를 작성해 주세요.'}
+          placeholder={isApproval ? '예: 이의제기를 확인해 게시물을 복원했습니다.' : '이의제기를 기각하는 이유를 작성해 주세요.'}
           onChange={(event) => { setReason(event.target.value); setValidationError('') }}
         />
         <span className="report-dialog-count">{reason.length}/1000자</span>

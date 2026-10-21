@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { locations } from '../../data/locations'
 import { schedules } from '../../data/schedules'
-import { getSongPerformanceStats } from '../../data/songStats'
+import { getSongPerformanceNumber, getSongPerformanceStats } from '../../data/songStats'
 import { songs } from '../../data/songs'
 import type { CountryCode, EventFormat, Schedule } from '../../types/archive'
 import { renderPhotoGallery } from '../media/photoGallery'
@@ -32,14 +32,6 @@ function getFormatLabel(format: EventFormat) {
   if (format === 'hybrid') return '대면·영상통화'
   if (format === 'unknown') return '형식 미확인'
   return '대면 행사'
-}
-
-function getSetlistStatusLabel(status: Schedule['setlistStatus']) {
-  if (status === 'known') return '전체 확인'
-  if (status === 'partial') return '일부 확인'
-  if (status === 'provisional') return '임시 입력'
-  if (status === 'none') return '공연 곡 없음'
-  return '미확인'
 }
 
 function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
@@ -134,23 +126,22 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
             <dt>장소</dt><dd>{detailLocation?.name ?? (selectedSchedule.eventFormat === 'online' ? '온라인 · 실제 장소 없음' : '장소 미확인')}</dd>
             {detailLocation?.address && <><dt>주소</dt><dd>{detailLocation.address}</dd></>}
             {selectedSchedule.startTime && <><dt>시작 시간</dt><dd>{selectedSchedule.startTime}</dd></>}
-            {selectedSchedule.eventFormat !== 'online' && <><dt>세트리스트 상태</dt><dd>{getSetlistStatusLabel(selectedSchedule.setlistStatus)}</dd></>}
           </dl>
-          {selectedSchedule.eventFormat !== 'online' && (
-            selectedSchedule.setlist.length > 0 ? (
-              <>
-                <h3>세트리스트</h3>
-                {selectedSchedule.setlistStatus === 'partial' && <p className="archive-data-note">일부 확인 · 확인된 곡만 표시합니다.</p>}
-                {selectedSchedule.setlistStatus === 'provisional' && <p className="archive-data-note">임시 입력된 목록입니다.</p>}
-                <ol className="archive-data-setlist">
-                  {selectedSchedule.setlist.map((songId, index) => (
-                    <li key={`${songId}-${index}`}>
-                      {songsById.get(songId)?.title ?? `곡 정보 오류: ${songId}`}
-                    </li>
-                  ))}
-                </ol>
-              </>
-            ) : <p className="archive-data-note">{selectedSchedule.setlistStatus === 'none' ? '공연 곡 없음' : '세트리스트 미확인'}</p>
+          {selectedSchedule.eventFormat !== 'online' && selectedSchedule.setlistStatus === 'none' && <p className="archive-data-note">행사에서 진행된 곡이 없습니다.</p>}
+          {selectedSchedule.eventFormat !== 'online' && selectedSchedule.setlistStatus !== 'none' && selectedSchedule.setlist.length > 0 && (
+            <>
+              <h3>세트리스트</h3>
+              <ol className="archive-data-setlist">
+                {selectedSchedule.setlist.map((songId, index) => {
+                  const song = songsById.get(songId)
+                  const performanceNumber = getSongPerformanceNumber(songId, selectedSchedule.id)
+                  return <li key={`${songId}-${index}`}>
+                    <span>{song?.title ?? `곡 정보 오류: ${songId}`}</span>
+                    {song && performanceNumber !== undefined && <span className="archive-data-song-count">기록상 {performanceNumber}번째 무대</span>}
+                  </li>
+                })}
+              </ol>
+            </>
           )}
           {selectedSchedule.media?.photos?.length ? <div ref={photoRef} /> : null}
           {selectedSchedule.media?.xPosts?.length ? <div ref={mediaRef} /> : null}

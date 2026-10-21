@@ -9,6 +9,50 @@ export type SongPerformanceStat = {
   partiallyConfirmedCount: number
 }
 
+function isCountableSetlist(schedule: Schedule) {
+  return schedule.setlistStatus === 'known' || schedule.setlistStatus === 'partial'
+}
+
+function compareSameDayOrder(a: Schedule, b: Schedule) {
+  if (a.orderInDay !== undefined && b.orderInDay !== undefined) {
+    return a.orderInDay === b.orderInDay ? undefined : a.orderInDay < b.orderInDay ? -1 : 1
+  }
+  if (a.startTime && b.startTime) {
+    return a.startTime === b.startTime ? undefined : a.startTime < b.startTime ? -1 : 1
+  }
+  return undefined
+}
+
+// 현재 일정을 포함해 날짜순으로 해당 곡의 몇 번째 확정 기록인지 돌려줍니다.
+// 같은 날 기록끼리 순서를 알 수 없으면 잘못된 순번을 만들지 않습니다.
+export function getSongPerformanceNumber(
+  songId: string,
+  scheduleId: string,
+  sourceSchedules: Schedule[] = schedules,
+): number | undefined {
+  const target = sourceSchedules.find((schedule) => schedule.id === scheduleId)
+  if (!target || !isCountableSetlist(target) || !target.setlist.includes(songId)) return undefined
+
+  const appearances = sourceSchedules.filter((schedule) =>
+    isCountableSetlist(schedule) && schedule.setlist.includes(songId))
+  let number = 1
+
+  for (const appearance of appearances) {
+    if (appearance.id === target.id) continue
+    if (appearance.date < target.date) {
+      number += 1
+      continue
+    }
+    if (appearance.date !== target.date) continue
+
+    const sameDayOrder = compareSameDayOrder(appearance, target)
+    if (sameDayOrder === undefined) return undefined
+    if (sameDayOrder < 0) number += 1
+  }
+
+  return number
+}
+
 // known/partial 일정에 확인된 곡만 세고, 한 일정 안의 중복 songId는 한 번만 계산합니다.
 export function getSongPerformanceStats(
   sourceSchedules: Schedule[] = schedules,
@@ -22,7 +66,7 @@ export function getSongPerformanceStats(
   }]))
 
   for (const schedule of sourceSchedules) {
-    if (schedule.setlistStatus !== 'known' && schedule.setlistStatus !== 'partial') continue
+    if (!isCountableSetlist(schedule)) continue
     for (const songId of new Set(schedule.setlist)) {
       const stat = stats.get(songId)
       if (!stat) continue

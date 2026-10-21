@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { songs } from '../../data/songs'
+import { getSongPerformanceNumber } from '../../data/songStats'
 import type { Schedule } from '../../types/archive'
 import { renderPhotoGallery } from '../media/photoGallery'
 import { renderXPostEmbeds } from '../media/xPostEmbeds'
@@ -64,25 +65,21 @@ function LocationlessSchedulePanel({ schedules, selected, onSelect, onBack, onCl
             <dt>장소</dt><dd>{selected.eventFormat === 'online' ? '온라인 행사 · 오프라인 장소 없음' : '장소 미확인'}</dd>
             {selected.startTime !== undefined && <><dt>시작 시간</dt><dd>{selected.startTime}</dd></>}
           </dl>
-          {selected.eventFormat !== 'online' && (
+          {selected.eventFormat !== 'online' && (selected.setlist.length > 0 || selected.setlistStatus === 'none') && (
             <>
               <h3>세트리스트</h3>
-              {selected.setlistStatus === 'known' || selected.setlistStatus === 'partial' || selected.setlistStatus === 'provisional' ? (
-                <>
-                  <p>{selected.setlistStatus === 'known'
-                    ? '확인 완료 · 공연 순서'
-                    : selected.setlistStatus === 'partial'
-                      ? '부분 확인 · 확인된 곡만 표시'
-                      : '기본 입력 · 실제 세트리스트 확인 필요'}</p>
-                  <ol className="schedule-setlist">
-                    {selected.setlist.map((songId, index) => (
-                      <li key={`${songId}-${index}`}>
-                        {songsById.get(songId)?.title ?? `곡 정보 오류: 존재하지 않는 songId (${songId})`}
-                      </li>
-                    ))}
-                  </ol>
-                </>
-              ) : <p>{selected.setlistStatus === 'unknown' ? '세트리스트 미확인' : '공연 곡 없음'}</p>}
+              {selected.setlistStatus === 'none'
+                ? <p>행사에서 진행된 곡이 없습니다.</p>
+                : <ol className="schedule-setlist">
+                  {selected.setlist.map((songId, index) => {
+                    const song = songsById.get(songId)
+                    const performanceNumber = getSongPerformanceNumber(songId, selected.id)
+                    return <li key={`${songId}-${index}`}>
+                      <span className="schedule-song-title">{song?.title ?? `곡 정보 오류: 존재하지 않는 songId (${songId})`}</span>
+                      {song && performanceNumber !== undefined && <span className="schedule-song-count">기록상 {performanceNumber}번째 무대</span>}
+                    </li>
+                  })}
+                </ol>}
             </>
           )}
           {selected.media?.photos?.length && <div ref={photoRef} />}

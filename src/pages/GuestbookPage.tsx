@@ -5,7 +5,7 @@ import { acceptCommunityTerms, deleteCommunityContent, deleteCommunityMedia, get
 import { claimHessxlAdmin, isCurrentArchiveAdmin } from '../features/community/adminApi'
 import type { CommunityMedia, GuestbookPost } from '../features/community/types'
 import GuestbookComposer from '../components/community/GuestbookComposer'
-import GuestbookReportDialog from '../components/community/GuestbookReportDialog'
+import CommunityReportDialog from '../components/community/CommunityReportDialog'
 import ModerationReasonDialog from '../components/community/ModerationReasonDialog'
 import TurnstileWidget from '../components/security/TurnstileWidget'
 import './CommunityPages.css'
@@ -264,8 +264,10 @@ function GuestbookPage() {
         ))}
       </div>
       {hasMore && <button className="secondary-button load-more" type="button" onClick={() => void loadPosts(page + 1, true)}>더 불러오기</button>}
-      <GuestbookReportDialog
-        post={reportTarget}
+      <CommunityReportDialog
+        target={reportTarget}
+        contentLabel="방명록"
+        feedLabel="내 방명록 목록"
         error={reportTarget ? reportErrors[reportTarget.id] : undefined}
         submitting={reportingPostId !== undefined}
         step={reportDialogStep}
