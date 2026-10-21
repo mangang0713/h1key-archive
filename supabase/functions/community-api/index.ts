@@ -4,7 +4,7 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const turnstileSecret = Deno.env.get('TURNSTILE_SECRET_KEY')
-const communityTermsVersion = '2026-10-19-v1'
+const communityTermsVersion = '2026-10-21-v2'
 const allowedOrigins = new Set((Deno.env.get('ALLOWED_ORIGINS') ?? 'http://localhost:5173,http://127.0.0.1:5173,https://mangang0713.github.io').split(',').map((value) => value.trim()).filter(Boolean))
 
 const admin = supabaseUrl && serviceRoleKey
@@ -13,7 +13,7 @@ const admin = supabaseUrl && serviceRoleKey
 
 function corsHeaders(origin: string | null) {
   const headers = new Headers({
-    'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
+    'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info, x-community-purge-secret',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',
   })
@@ -143,11 +143,115 @@ async function removeMediaForContent(client: SupabaseClient, contentType: string
   const paths = media.map((item) => item.object_path)
   const { error: storageError } = await client.storage.from('community-images').remove(paths)
   if (storageError) throw new Error('첨부 사진 파일을 지우지 못했습니다.')
-  for (const item of media) {
-    if (item.owner_id) await client.rpc('release_community_media', { p_user_id: item.owner_id, p_byte_size: item.byte_size })
+  const { error: removeRecordsError } = await client.rpc('remove_community_media_records', {
+    p_media_ids: media.map((item) => item.id),
+  })
+  if (removeRecordsError) throw new Error('사진 사용량과 첨부 기록을 함께 갱신하지 못했습니다.')
+}
+
+async function permanentlyDeleteCommunityContent(client: SupabaseClient, contentType: string, contentId: string) {
+  await removeMediaForContent(client, contentType, contentId)
+  const { data, error } = await client.rpc('purge_community_content_record', {
+    p_content_type: contentType,
+    p_content_id: contentId,
+    p_required_status: null,
+  })
+  if (error || !data) throw new Error('게시물과 관련 기록을 완전히 삭제하지 못했습니다.')
+}
+
+async function attachModerationDetails(client: SupabaseClient, items: Array<Record<string, unknown>>) {
+  if (!items.length) return items
+  const ids = items.map((item) => String(item.id))
+  const { data: appeals, error: appealError } = await client.from('content_appeals')
+    .select('id, content_type, content_id, reason, status, submitted_at, decided_at, decision_reason')
+    .in('content_id', ids).order('submitted_at', { ascending: false })
+  if (appealError) throw new Error('이의제기 정보를 불러오지 못했습니다.')
+  const latestAppealByContent = new Map<string, (typeof appeals)[number]>()
+  for (const appeal of appeals ?? []) {
+    const key = `${appeal.content_type}:${appeal.content_id}`
+    if (!latestAppealByContent.has(key)) latestAppealByContent.set(key, appeal)
   }
-  const { error: deleteError } = await client.from('community_media').delete().in('id', media.map((item) => item.id))
-  if (deleteError) throw new Error('첨부 사진 기록을 지우지 못했습니다.')
+
+  const mediaRows: Array<{ id: string; object_path: string; byte_size: number; mediaContentType: string; parentType: 'guestbook' | 'review'; parentId: string }> = []
+  const guestbookIds = items.filter((item) => item.content_type === 'guestbook').map((item) => String(item.id))
+  const reviewIds = items.filter((item) => item.content_type === 'review').map((item) => String(item.id))
+  if (guestbookIds.length) {
+    const { data, error } = await client.from('community_media')
+      .select('id, object_path, byte_size, content_type, guestbook_post_id').in('guestbook_post_id', guestbookIds)
+    if (error) throw new Error('게시물 사진 정보를 불러오지 못했습니다.')
+    mediaRows.push(...(data ?? []).map((item) => ({ id: item.id, object_path: item.object_path, byte_size: item.byte_size, mediaContentType: item.content_type, parentType: 'guestbook' as const, parentId: item.guestbook_post_id })))
+  }
+  if (reviewIds.length) {
+    const { data, error } = await client.from('community_media')
+      .select('id, object_path, byte_size, content_type, schedule_review_id').in('schedule_review_id', reviewIds)
+    if (error) throw new Error('게시물 사진 정보를 불러오지 못했습니다.')
+    mediaRows.push(...(data ?? []).map((item) => ({ id: item.id, object_path: item.object_path, byte_size: item.byte_size, mediaContentType: item.content_type, parentType: 'review' as const, parentId: item.schedule_review_id })))
+  }
+
+  const result = items.map((item) => ({
+    ...item,
+    appeal: latestAppealByContent.get(`${item.content_type}:${item.id}`) ?? null,
+    media: [] as Array<Record<string, unknown>>,
+  }))
+  await Promise.all(mediaRows.map(async (media) => {
+    const parent = result.find((item) => item.id === media.parentId && item.content_type === media.parentType)
+    if (!parent) return
+    const { data } = await client.storage.from('community-images').createSignedUrl(String(media.object_path), 300)
+    if (data?.signedUrl) parent.media.push({ id: media.id, byte_size: media.byte_size, content_type: media.mediaContentType, signed_url: data.signedUrl })
+  }))
+  return result
+}
+
+function safeSecretEquals(received: string, expected: string) {
+  if (!received || !expected || received.length !== expected.length) return false
+  let difference = 0
+  for (let index = 0; index < received.length; index += 1) difference |= received.charCodeAt(index) ^ expected.charCodeAt(index)
+  return difference === 0
+}
+
+async function purgeExpiredCommunityContent(client: SupabaseClient) {
+  const now = new Date().toISOString()
+  const [guestbookResult, reviewResult] = await Promise.all([
+    client.from('guestbook_posts').select('id, purge_after').eq('status', 'hidden').lte('purge_after', now).order('purge_after').limit(50),
+    client.from('schedule_reviews').select('id, purge_after').eq('status', 'hidden').lte('purge_after', now).order('purge_after').limit(50),
+  ])
+  if (guestbookResult.error || reviewResult.error) throw new Error('만료된 숨김 게시물을 확인하지 못했습니다.')
+  const candidates = [
+    ...(guestbookResult.data ?? []).map((item) => ({ ...item, content_type: 'guestbook' as const })),
+    ...(reviewResult.data ?? []).map((item) => ({ ...item, content_type: 'review' as const })),
+  ]
+  if (!candidates.length) return { purged: 0, waitingForAppeal: 0 }
+
+  const { data: pendingAppeals, error: pendingError } = await client.from('content_appeals')
+    .select('content_type, content_id').eq('status', 'pending').in('content_id', candidates.map((item) => item.id))
+  if (pendingError) throw new Error('진행 중인 이의제기를 확인하지 못했습니다.')
+  const pendingKeys = new Set((pendingAppeals ?? []).map((appeal) => `${appeal.content_type}:${appeal.content_id}`))
+  let purged = 0
+  let failed = 0
+  for (const item of candidates) {
+    if (pendingKeys.has(`${item.content_type}:${item.id}`)) continue
+    try {
+      const { data: claimed, error: claimError } = await client.rpc('claim_expired_community_content_for_purge', {
+        p_content_type: item.content_type,
+        p_content_id: item.id,
+      })
+      if (claimError) throw new Error('영구 삭제 작업을 시작하지 못했습니다.')
+      if (!claimed) continue
+      await removeMediaForContent(client, item.content_type, item.id)
+      const { data: removed, error: purgeError } = await client.rpc('purge_community_content_record', {
+        p_content_type: item.content_type,
+        p_content_id: item.id,
+        p_required_status: 'purging',
+      })
+      if (purgeError || !removed) throw new Error('만료된 게시물을 최종 삭제하지 못했습니다.')
+      purged += 1
+    } catch (error) {
+      failed += 1
+      console.error('Expired community content purge failed', item.content_type, item.id, error)
+      await client.rpc('release_community_content_purge_claim', { p_content_type: item.content_type, p_content_id: item.id })
+    }
+  }
+  return { purged, waitingForAppeal: pendingKeys.size, failed }
 }
 
 async function signedMedia(client: SupabaseClient, ids: unknown) {
@@ -191,19 +295,28 @@ async function allowMediaRequest(request: Request, client: SupabaseClient) {
 
 async function deleteCommunityContent(client: SupabaseClient, contentType: string, contentId: string, userId: string) {
   const table = contentType === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
-  const { data: post, error: ownershipError } = await client.from(table).select('id, user_id').eq('id', contentId).maybeSingle()
+  const { data: post, error: ownershipError } = await client.from(table).select('id, user_id, status').eq('id', contentId).maybeSingle()
   if (ownershipError || !post) throw new Error('게시물을 찾지 못했습니다.')
-  if (post.user_id !== userId && !await isAdmin(client, userId)) throw new Error('본인 게시물만 삭제할 수 있습니다.')
-  await removeMediaForContent(client, contentType, contentId)
-  const { error } = await client.from(table).delete().eq('id', contentId)
-  if (error) throw new Error('게시물을 삭제하지 못했습니다.')
+  if (post.user_id !== userId) throw new Error('본인 게시물만 영구 삭제할 수 있습니다. 관리자 조치는 숨김 처리와 이의제기를 이용해 주세요.')
+  if (post.status !== 'published') throw new Error('숨김 검토 중인 게시물은 이의제기 기간이 끝날 때까지 직접 삭제할 수 없습니다.')
+  await permanentlyDeleteCommunityContent(client, contentType, contentId)
 }
 
 async function deleteCommunityMedia(client: SupabaseClient, mediaId: string, userId: string) {
-  if (!await isAdmin(client, userId)) throw new Error('관리자만 첨부 사진을 직접 삭제할 수 있습니다.')
   const { data: media, error: mediaError } = await client.from('community_media')
-    .select('id, owner_id, object_path, byte_size').eq('id', mediaId).maybeSingle()
+    .select('id, owner_id, object_path, byte_size, guestbook_post_id, schedule_review_id').eq('id', mediaId).maybeSingle()
   if (mediaError || !media) throw new Error('첨부 사진을 찾지 못했습니다.')
+  if (media.owner_id !== userId && !await isAdmin(client, userId)) {
+    throw new Error('본인 사진만 삭제할 수 있습니다.')
+  }
+  if (media.guestbook_post_id) {
+    const { data } = await client.from('guestbook_posts').select('status').eq('id', media.guestbook_post_id).maybeSingle()
+    if (data?.status === 'hidden') throw new Error('숨김 검토 기간에는 게시물과 사진을 보존합니다.')
+  }
+  if (media.schedule_review_id) {
+    const { data } = await client.from('schedule_reviews').select('status').eq('id', media.schedule_review_id).maybeSingle()
+    if (data?.status === 'hidden') throw new Error('숨김 검토 기간에는 게시물과 사진을 보존합니다.')
+  }
   const { error: storageError } = await client.storage.from('community-images').remove([media.object_path])
   if (storageError) throw new Error('첨부 사진 파일을 지우지 못했습니다.')
   if (media.owner_id) {
@@ -286,6 +399,13 @@ Deno.serve(async (request) => {
       if (!await allowMediaRequest(request, admin)) return respond({ error: '사진 요청이 너무 많습니다. 잠시 뒤 다시 시도해 주세요.' }, 429, origin)
       return respond(await signedMedia(admin, rawBody.mediaIds), 200, origin)
     }
+    if (action === 'purge-expired-content') {
+      const expectedSecret = Deno.env.get('COMMUNITY_PURGE_SECRET') ?? ''
+      const receivedSecret = request.headers.get('x-community-purge-secret') ?? ''
+      if (!safeSecretEquals(receivedSecret, expectedSecret)) return respond({ error: '예약 정리 요청을 인증하지 못했습니다.' }, 403, origin)
+      const result = await purgeExpiredCommunityContent(admin)
+      return respond(result, result.failed ? 500 : 200, origin)
+    }
     const { user } = await requireUser(request)
     if (action === 'accept-community-terms') {
       await acceptCommunityTerms(admin, user.id)
@@ -310,42 +430,40 @@ Deno.serve(async (request) => {
       await takeLimit(adminClient, userId, 'get-admin-hidden-content', 60, 3600)
       if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 숨김 게시물을 볼 수 있습니다.')
       const [guestbookResult, reviewResult] = await Promise.all([
-        adminClient.from('guestbook_posts').select('id, author_name, body, created_at').eq('status', 'hidden').order('created_at', { ascending: false }).limit(100),
-        adminClient.from('schedule_reviews').select('id, schedule_id, author_name, body, rating, created_at').eq('status', 'hidden').order('created_at', { ascending: false }).limit(100),
+        adminClient.from('guestbook_posts').select('id, author_name, body, created_at, status, moderation_reason, hidden_at, purge_after').eq('status', 'hidden').order('hidden_at', { ascending: false }).limit(100),
+        adminClient.from('schedule_reviews').select('id, schedule_id, author_name, body, rating, created_at, status, moderation_reason, hidden_at, purge_after').eq('status', 'hidden').order('hidden_at', { ascending: false }).limit(100),
       ])
       if (guestbookResult.error || reviewResult.error) throw new Error('숨김 게시물을 불러오지 못했습니다.')
       const hidden = [
-        ...(guestbookResult.data ?? []).map((item) => ({ ...item, content_type: 'guestbook' as const, schedule_id: null, rating: null, media: [] as unknown[] })),
-        ...(reviewResult.data ?? []).map((item) => ({ ...item, content_type: 'review' as const, media: [] as unknown[] })),
+        ...(guestbookResult.data ?? []).map((item) => ({ ...item, content_type: 'guestbook' as const, schedule_id: null, rating: null })),
+        ...(reviewResult.data ?? []).map((item) => ({ ...item, content_type: 'review' as const })),
+      ].sort((a, b) => (b.hidden_at ?? b.created_at).localeCompare(a.hidden_at ?? a.created_at)).slice(0, 100)
+      return respond(await attachModerationDetails(adminClient, hidden), 200, origin)
+    }
+    if (action === 'get-my-content') {
+      await takeLimit(adminClient, userId, 'get-my-content', 60, 3600)
+      const [guestbookResult, reviewResult] = await Promise.all([
+        adminClient.from('guestbook_posts').select('id, author_name, body, created_at, status, moderation_reason, hidden_at, purge_after').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
+        adminClient.from('schedule_reviews').select('id, schedule_id, author_name, body, rating, created_at, status, moderation_reason, hidden_at, purge_after').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
+      ])
+      if (guestbookResult.error || reviewResult.error) throw new Error('내 게시글을 불러오지 못했습니다.')
+      const ownContent = [
+        ...(guestbookResult.data ?? []).map((item) => ({ ...item, content_type: 'guestbook' as const, schedule_id: null, rating: null })),
+        ...(reviewResult.data ?? []).map((item) => ({ ...item, content_type: 'review' as const })),
       ].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 100)
-      const guestbookIds = hidden.filter((item) => item.content_type === 'guestbook').map((item) => item.id)
-      const reviewIds = hidden.filter((item) => item.content_type === 'review').map((item) => item.id)
-      const mediaRows = []
-      if (guestbookIds.length) {
-        const { data, error } = await adminClient.from('community_media').select('id, object_path, byte_size, content_type, guestbook_post_id').in('guestbook_post_id', guestbookIds)
-        if (error) throw new Error('숨김 게시물 사진 정보를 불러오지 못했습니다.')
-        mediaRows.push(...(data ?? []).map((item) => ({ ...item, parentId: item.guestbook_post_id })))
-      }
-      if (reviewIds.length) {
-        const { data, error } = await adminClient.from('community_media').select('id, object_path, byte_size, content_type, schedule_review_id').in('schedule_review_id', reviewIds)
-        if (error) throw new Error('숨김 게시물 사진 정보를 불러오지 못했습니다.')
-        mediaRows.push(...(data ?? []).map((item) => ({ ...item, parentId: item.schedule_review_id })))
-      }
-      await Promise.all(mediaRows.map(async (item) => {
-        const { data } = await adminClient.storage.from('community-images').createSignedUrl(item.object_path, 300)
-        const parent = hidden.find((post) => post.id === item.parentId)
-        if (parent && data?.signedUrl) parent.media.push({ id: item.id, byte_size: item.byte_size, content_type: item.content_type, signed_url: data.signedUrl })
-      }))
-      return respond(hidden, 200, origin)
+      return respond(await attachModerationDetails(adminClient, ownContent), 200, origin)
     }
     if (action === 'restore-hidden-content') {
       if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 숨김 게시물을 복원할 수 있습니다.')
       const contentType = rawBody.contentType
       if (contentType !== 'guestbook' && contentType !== 'review') throw new Error('복원할 게시물 종류가 올바르지 않습니다.')
       const table = contentType === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
-      const { data, error } = await adminClient.from(table).update({ status: 'published', updated_at: new Date().toISOString() })
+      const now = new Date().toISOString()
+      const { data, error } = await adminClient.from(table).update({ status: 'published', moderation_reason: null, hidden_at: null, purge_after: null, updated_at: now })
         .eq('id', text(rawBody.contentId, 100)).eq('status', 'hidden').select('id').maybeSingle()
       if (error || !data) throw new Error('숨김 게시물을 복원하지 못했습니다. 다시 목록을 불러와 확인해 주세요.')
+      await adminClient.from('content_appeals').update({ status: 'approved', decided_at: now, decision_reason: '관리자 검토 후 게시물이 복원되었습니다.' })
+        .eq('content_type', contentType).eq('content_id', data.id).eq('status', 'pending')
       return respond({ restored: true }, 200, origin)
     }
     if (action === 'update-admin-settings') {
@@ -360,13 +478,13 @@ Deno.serve(async (request) => {
 
     const captchaActions = new Set(['create-guestbook', 'edit-guestbook', 'create-review', 'edit-review'])
     if (captchaActions.has(String(action))) await verifyTurnstile(request, rawBody.turnstileToken)
-    if (!['moderate-report', 'get-admin-settings', 'update-admin-settings', 'get-admin-reports', 'get-admin-hidden-content', 'restore-hidden-content', 'delete-content', 'delete-media', 'delete-account'].includes(String(action))) {
+    if (!['moderate-report', 'get-admin-settings', 'update-admin-settings', 'get-admin-reports', 'get-admin-hidden-content', 'get-my-content', 'restore-hidden-content', 'resolve-appeal', 'submit-appeal', 'hide-content', 'delete-content', 'delete-media', 'delete-account'].includes(String(action))) {
       await assertCommunityEnabled(adminClient)
     }
 
     if (action === 'create-guestbook') {
       await requireCommunityTerms(adminClient, userId)
-      await takeLimit(adminClient, userId, 'create-guestbook', 3, 3600)
+      await takeLimit(adminClient, userId, 'create-guestbook', 10, 3600)
       const body = text(rawBody.body, 1200)
       const author = await profileName(adminClient, userId)
       const { data, error } = await adminClient.from('guestbook_posts').insert({ user_id: userId, author_name: author, body }).select('id').single()
@@ -376,8 +494,8 @@ Deno.serve(async (request) => {
     if (action === 'edit-guestbook') {
       await requireCommunityTerms(adminClient, userId)
       await takeLimit(adminClient, userId, 'edit-guestbook', 8, 3600)
-      const { error } = await adminClient.from('guestbook_posts').update({ body: text(rawBody.body, 1200), updated_at: new Date().toISOString() }).eq('id', rawBody.postId).eq('user_id', userId)
-      if (error) throw new Error('본인 방명록 글만 수정할 수 있습니다.')
+      const { data, error } = await adminClient.from('guestbook_posts').update({ body: text(rawBody.body, 1200), updated_at: new Date().toISOString() }).eq('id', rawBody.postId).eq('user_id', userId).eq('status', 'published').select('id').maybeSingle()
+      if (error || !data) throw new Error('본인의 공개 상태 게시물만 수정할 수 있습니다.')
       return respond({ id: rawBody.postId }, 200, origin)
     }
     if (action === 'create-review' || action === 'edit-review') {
@@ -389,8 +507,8 @@ Deno.serve(async (request) => {
       if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new Error('별점은 1~5점으로 선택해 주세요.')
       const author = await profileName(adminClient, userId)
       if (action === 'edit-review') {
-        const { error } = await adminClient.from('schedule_reviews').update({ body, rating, updated_at: new Date().toISOString() }).eq('id', rawBody.reviewId).eq('user_id', userId)
-        if (error) throw new Error('본인 후기만 수정할 수 있습니다.')
+        const { data, error } = await adminClient.from('schedule_reviews').update({ body, rating, updated_at: new Date().toISOString() }).eq('id', rawBody.reviewId).eq('user_id', userId).eq('status', 'published').select('id').maybeSingle()
+        if (error || !data) throw new Error('본인의 공개 상태 후기만 수정할 수 있습니다.')
         return respond({ id: rawBody.reviewId }, 200, origin)
       }
       const { data, error } = await adminClient.from('schedule_reviews').insert({ schedule_id: scheduleId, user_id: userId, author_name: author, body, rating }).select('id').single()
@@ -416,6 +534,58 @@ Deno.serve(async (request) => {
       if (contentType !== 'guestbook' && contentType !== 'review') throw new Error('삭제할 게시물 종류가 올바르지 않습니다.')
       await deleteCommunityContent(adminClient, contentType, text(rawBody.contentId, 100), userId)
       return respond({ deleted: true }, 200, origin)
+    }
+    if (action === 'hide-content') {
+      await takeLimit(adminClient, userId, 'hide-content', 20, 3600)
+      if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 게시물을 숨길 수 있습니다.')
+      const contentType = rawBody.contentType
+      if (contentType !== 'guestbook' && contentType !== 'review') throw new Error('숨길 게시물 종류가 올바르지 않습니다.')
+      const table = contentType === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
+      const contentId = text(rawBody.contentId, 100)
+      const reason = text(rawBody.reason, 1000)
+      const now = new Date()
+      const { data, error } = await adminClient.from(table).update({
+        status: 'hidden', moderation_reason: reason, hidden_at: now.toISOString(),
+        purge_after: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), updated_at: now.toISOString(),
+      }).eq('id', contentId).eq('status', 'published').select('id').maybeSingle()
+      if (error || !data) throw new Error('공개 게시물을 숨기지 못했습니다. 이미 숨겨졌거나 삭제된 글인지 확인해 주세요.')
+      const { error: reportCleanupError } = await adminClient.from('content_reports').update({ status: 'actioned' })
+        .eq('content_type', contentType).eq('content_id', data.id).eq('status', 'open')
+      if (reportCleanupError) throw new Error('게시물은 숨겼지만 연결된 신고 처리를 갱신하지 못했습니다.')
+      return respond({ hidden: true, purgeAfter: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() }, 200, origin)
+    }
+    if (action === 'submit-appeal') {
+      await takeLimit(adminClient, userId, 'submit-appeal', 3, 86400)
+      const contentType = rawBody.contentType
+      if (contentType !== 'guestbook' && contentType !== 'review') throw new Error('이의제기 게시물 종류가 올바르지 않습니다.')
+      const contentId = text(rawBody.contentId, 100)
+      const reason = text(rawBody.reason, 1000)
+      const { data, error } = await adminClient.rpc('submit_community_content_appeal', {
+        p_content_type: contentType, p_content_id: contentId, p_author_id: userId, p_reason: reason,
+      })
+      if (error) throw new Error('이미 이의제기를 제출했거나 저장하지 못했습니다.')
+      return respond({ submitted: true, appealId: data }, 200, origin)
+    }
+    if (action === 'resolve-appeal') {
+      if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 이의제기를 검토할 수 있습니다.')
+      const decision = rawBody.decision
+      if (decision !== 'approve' && decision !== 'reject') throw new Error('이의제기 처리 방식이 올바르지 않습니다.')
+      const appealId = text(rawBody.appealId, 100)
+      const { data: appeal, error: appealError } = await adminClient.from('content_appeals').select('*').eq('id', appealId).maybeSingle()
+      if (appealError || !appeal || appeal.status !== 'pending') throw new Error('검토 대기 중인 이의제기를 찾지 못했습니다.')
+      const decisionReason = decision === 'reject' ? text(rawBody.reason, 1000) : (typeof rawBody.reason === 'string' ? rawBody.reason.trim().slice(0, 1000) || null : null)
+      const now = new Date().toISOString()
+      if (decision === 'approve') {
+        const table = appeal.content_type === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
+        const { error } = await adminClient.from(table).update({ status: 'published', moderation_reason: null, hidden_at: null, purge_after: null, updated_at: now })
+          .eq('id', appeal.content_id).eq('status', 'hidden')
+        if (error) throw new Error('게시물을 복원하지 못해 이의제기를 처리하지 못했습니다.')
+      }
+      const { error } = await adminClient.from('content_appeals').update({
+        status: decision === 'approve' ? 'approved' : 'rejected', decided_at: now, decision_reason: decisionReason,
+      }).eq('id', appealId).eq('status', 'pending')
+      if (error) throw new Error('이의제기 판정을 저장하지 못했습니다.')
+      return respond({ resolved: true, decision }, 200, origin)
     }
     if (action === 'delete-media') {
       await takeLimit(adminClient, userId, 'delete-media', 20, 3600)
@@ -446,28 +616,36 @@ Deno.serve(async (request) => {
     if (action === 'moderate-report') {
       if (!await isAdmin(adminClient, userId)) throw new Error('관리자만 신고를 처리할 수 있습니다.')
       const decision = rawBody.decision
-      if (!['dismiss', 'hide', 'delete'].includes(decision)) throw new Error('신고 처리 방식이 올바르지 않습니다.')
+      if (!['dismiss', 'hide'].includes(decision)) throw new Error('신고 처리 방식이 올바르지 않습니다.')
       const { data: report, error: reportError } = await adminClient.from('content_reports').select('*').eq('id', rawBody.reportId).single()
       if (reportError) throw new Error('신고 내역을 찾지 못했습니다.')
       if (decision === 'dismiss') {
         const { error } = await adminClient.from('content_reports').update({ status: 'dismissed' }).eq('id', report.id)
         if (error) throw new Error('신고 기각을 저장하지 못했습니다.')
       } else if (decision === 'hide') {
+        const reason = text(rawBody.reason, 1000)
         const table = report.content_type === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
-        const { error: contentError } = await adminClient.from(table).update({ status: 'hidden' }).eq('id', report.content_id)
-        const { error: reportError } = await adminClient.from('content_reports').update({ status: 'actioned' }).eq('id', report.id)
+        const { data: content, error: readContentError } = await adminClient.from(table).select('id, status').eq('id', report.content_id).maybeSingle()
+        if (readContentError || !content) throw new Error('신고 대상 게시물을 찾지 못했습니다.')
+        let contentError = null
+        if (content.status === 'published') {
+          const now = new Date()
+          const { error } = await adminClient.from(table).update({
+            status: 'hidden', moderation_reason: reason, hidden_at: now.toISOString(),
+            purge_after: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), updated_at: now.toISOString(),
+          }).eq('id', content.id)
+          contentError = error
+        }
+        const { error: reportError } = await adminClient.from('content_reports').update({ status: 'actioned' })
+          .eq('content_type', report.content_type).eq('content_id', report.content_id).eq('status', 'open')
         if (contentError || reportError) throw new Error('신고 숨김 처리를 저장하지 못했습니다.')
-      } else {
-        await removeMediaForContent(adminClient, report.content_type, report.content_id)
-        const table = report.content_type === 'guestbook' ? 'guestbook_posts' : 'schedule_reviews'
-        const { error: contentError } = await adminClient.from(table).delete().eq('id', report.content_id)
-        const { error: reportError } = await adminClient.from('content_reports').update({ status: 'actioned' }).eq('id', report.id)
-        if (contentError || reportError) throw new Error('신고 삭제 처리를 저장하지 못했습니다.')
       }
       return respond({ processed: true }, 200, origin)
     }
     if (action === 'delete-account') {
       await takeLimit(adminClient, userId, 'delete-account', 1, 86400)
+      const { error: appealCleanupError } = await adminClient.from('content_appeals').delete().eq('author_id', userId)
+      if (appealCleanupError) throw new Error('계정에 연결된 이의제기 기록을 정리하지 못했습니다.')
       const { data: media, error: mediaError } = await adminClient.from('community_media').select('object_path, byte_size').eq('owner_id', userId)
       if (mediaError) throw new Error('계정 사진을 확인하지 못했습니다.')
       if (media?.length) {

@@ -12,6 +12,8 @@ Supabase 프로젝트의 커뮤니티 DB 마이그레이션과 `community-api` E
 6. `community-api` Edge Function을 배포하고 다음 설정을 확인합니다: Supabase가 제공하는 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, 직접 등록한 `TURNSTILE_SECRET_KEY`, `ALLOWED_ORIGINS`. 현재 `ALLOWED_ORIGINS`는 로컬 주소, GitHub Pages, 임시 테스트 사이트 주소를 쉼표로 구분해 포함합니다. 서비스 역할 키는 Edge Function 비밀 설정에만 둡니다.
 7. 운영 메뉴는 X 로그인 계정 `hessxl_`에만 표시됩니다. 세 번째 마이그레이션의 서버 함수가 X OAuth identity의 사용자명을 확인해 해당 계정만 `admin_members`에 등록합니다. 화면에서 이름을 흉내 내거나 프로필 표시 이름을 바꾸는 것만으로 관리자 권한을 얻을 수 없습니다.
 8. 로그인, 작성·수정·삭제, 신고, 관리자 숨김·삭제, 사진 한도, 중단 스위치를 익명·일반 사용자·관리자로 각각 시험합니다. 개인정보 안내에는 X 문의 계정 `@hessxl_`와 2027년 12월 31일 이후 서비스 데이터 폐기 예정일을 반영했습니다. 공개 전에 실제 처리 흐름과 정책이 일치하는지 최종 검토합니다.
+9. 커뮤니티 신고·숨김·이의제기·7일 보관 흐름을 사용하는 경우 `migrations/202610210003_community_moderation_appeals_and_retention.sql`을 적용하고 최신 `community-api` Edge Function을 배포합니다. 이 마이그레이션은 기존 숨김 글에 적용 시점부터 7일의 이의제기 기간을 부여하고, 만료 시각이 지나도 대기 중인 이의제기가 있으면 최종 판정을 기다립니다.
+10. 자동 만료 정리를 활성화하려면 무작위 비밀값 하나를 정해 Edge Function Secrets에 `COMMUNITY_PURGE_SECRET`으로, Database → Vault에는 `community_purge_secret`으로 등록합니다. 두 값은 같아야 하며 코드·GitHub 저장소·공개 채팅에 넣지 않습니다. 그다음 `migrations/202610210004_schedule_community_content_purge.sql`을 적용하면 매시간 17분에 Edge Function을 호출하는 Cron 작업이 만들어집니다. Vault 비밀값이 등록되기 전에는 요청하지 않으며, 함수도 Edge secret과 값이 일치해야만 실행됩니다.
 
 ## 한도와 운영
 
@@ -22,6 +24,8 @@ Supabase 프로젝트의 커뮤니티 DB 마이그레이션과 `community-api` E
 - Supabase Free만으로 대규모 DDoS 가용성을 보장하지 않습니다. Auth와 계정별 요청 제한, Turnstile, 사용량 감시와 중단 스위치를 함께 사용합니다. 지도·일정은 정적 자산이므로 커뮤니티 기능 장애 때도 계속 조회할 수 있습니다.
 - 사진은 private Storage에 저장하며, 공개 게시물에서 보여줄 때 5분짜리 signed URL을 발급합니다. 사진 열람 스위치를 끄면 새 URL을 발급하지 않습니다. 이미 발급한 URL은 만료 시각까지 유효할 수 있습니다.
 - 계정 삭제 시 본문과 후기는 “익명 사용자”로 남기고 작성 계정 연결, 좋아요, 첨부 사진은 삭제합니다.
+- 관리자가 글을 숨길 때 사유, 숨김 시각, 삭제 예정 시각을 저장합니다. 작성자는 `/account/posts`에서 자기 글과 운영 사유를 확인하고 7일 안에 이의제기할 수 있습니다. 대기 중인 이의제기는 만료 작업을 멈추며, 승인 시 공개로 복원하고 기각 시 원래 7일 기한에 따라 삭제합니다.
+- 7일 보관이 끝난 글은 Edge Function이 private Storage 원본 사진, DB 게시물, 신고 인용문, 이의제기 기록을 함께 제거합니다. 이 작업은 되돌릴 수 없고, 제거가 끝나면 관리자 화면에도 남지 않습니다. Edge Function 배포와 두 비밀값 등록이 끝나기 전에는 자동 만료 정리가 활성화되지 않습니다.
 
 > 무료 등급의 정확한 제한은 서비스 운영 시점과 조직의 다른 프로젝트 사용량에 따라 달라질 수 있으므로 공개 전 Supabase Dashboard의 Billing/Usage를 다시 확인하세요. 사용자 지정 도메인과 외부 보호 서비스를 추가하기 전까지 `github.io`와 Supabase API를 Cloudflare가 자동 보호한다고 가정하지 않습니다.
 

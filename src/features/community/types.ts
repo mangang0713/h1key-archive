@@ -38,6 +38,15 @@ export type ContentReport = {
   target_author: string
 }
 
+export type ContentAppeal = {
+  id: string
+  reason: string
+  status: 'pending' | 'approved' | 'rejected'
+  submitted_at: string
+  decided_at: string | null
+  decision_reason: string | null
+}
+
 export type HiddenCommunityContent = {
   id: string
   content_type: 'guestbook' | 'review'
@@ -46,8 +55,15 @@ export type HiddenCommunityContent = {
   body: string
   rating: number | null
   created_at: string
+  status: 'published' | 'hidden' | 'purging'
+  moderation_reason: string | null
+  hidden_at: string | null
+  purge_after: string | null
+  appeal: ContentAppeal | null
   media: Array<Pick<CommunityMedia, 'id' | 'signed_url'>>
 }
+
+export type MyCommunityContent = HiddenCommunityContent
 
 export type CommunitySettings = {
   community_enabled: boolean

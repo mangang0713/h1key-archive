@@ -1,7 +1,79 @@
-import type { AdminCommunitySettings, CommunityMedia, CommunitySettings, ContentReport, GuestbookPost, HiddenCommunityContent, ScheduleReview } from './types'
+import type { AdminCommunitySettings, CommunityMedia, CommunitySettings, ContentReport, GuestbookPost, HiddenCommunityContent, MyCommunityContent, ScheduleReview } from './types'
 import { supabase, supabaseConfig } from '../../lib/supabase/client'
 
 const PAGE_SIZE = 12
+
+export class CommunityRequestError extends Error {
+  readonly code: string
+  readonly status?: number
+
+  constructor(
+    code: string,
+    message: string,
+    status?: number,
+  ) {
+    super(message)
+    this.name = 'CommunityRequestError'
+    this.code = code
+    this.status = status
+  }
+}
+
+export class GuestbookPhotoUploadError extends CommunityRequestError {
+  readonly postId: string
+  readonly createdPost: boolean
+  readonly uploadedPhotoCount: number
+  readonly totalPhotoCount: number
+
+  constructor(
+    postId: string,
+    createdPost: boolean,
+    uploadedPhotoCount: number,
+    totalPhotoCount: number,
+    error: unknown,
+  ) {
+    const details = getCommunityErrorDetails(error)
+    super(details.code, details.message, error instanceof CommunityRequestError ? error.status : undefined)
+    this.name = 'GuestbookPhotoUploadError'
+    this.postId = postId
+    this.createdPost = createdPost
+    this.uploadedPhotoCount = uploadedPhotoCount
+    this.totalPhotoCount = totalPhotoCount
+  }
+}
+
+export function getCommunityErrorDetails(error: unknown) {
+  if (error instanceof CommunityRequestError) return { code: error.code, message: error.message }
+  return {
+    code: error instanceof Error ? 'REQUEST_FAILED' : 'UNKNOWN_ERROR',
+    message: error instanceof Error ? error.message : '요청을 완료하지 못했습니다.',
+  }
+}
+
+async function readFunctionError(error: unknown) {
+  if (!(error instanceof Error)) return new CommunityRequestError('FUNCTION_REQUEST_FAILED', '요청을 처리하지 못했습니다.')
+
+  const context = (error as Error & { context?: unknown }).context
+  if (context instanceof Response) {
+    const body = await context.clone().json().catch(() => null) as { code?: unknown; error?: unknown } | null
+    const status = context.status
+    const message = typeof body?.error === 'string'
+      ? body.error
+      : status >= 500
+        ? '서버에서 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+        : `요청을 처리하지 못했습니다. (HTTP ${status})`
+    const code = typeof body?.code === 'string' ? body.code : `HTTP_${status}`
+    return new CommunityRequestError(code, message, status)
+  }
+
+  if (error.name === 'FunctionsFetchError') {
+    return new CommunityRequestError('NETWORK_ERROR', '서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.')
+  }
+  if (error.name === 'FunctionsRelayError') {
+    return new CommunityRequestError('EDGE_FUNCTION_UNAVAILABLE', '요청 처리 서버가 응답하지 않습니다. 잠시 후 다시 시도해 주세요.')
+  }
+  return new CommunityRequestError('FUNCTION_REQUEST_FAILED', error.message || '요청을 처리하지 못했습니다.')
+}
 
 function requireClient() {
   if (!supabase) throw new Error('Supabase 연결 설정이 필요합니다. .env.example을 참고해 주세요.')
@@ -11,8 +83,8 @@ function requireClient() {
 async function invoke<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
   const client = requireClient()
   const { data, error } = await client.functions.invoke('community-api', { body: { action, ...payload } })
-  if (error) throw new Error(error.message)
-  if (data?.error) throw new Error(String(data.error))
+  if (error) throw await readFunctionError(error)
+  if (data?.error) throw new CommunityRequestError(String(data.code ?? 'REQUEST_REJECTED'), String(data.error))
   return data as T
 }
 
@@ -73,8 +145,17 @@ export async function getScheduleReactions(scheduleId: string, userId?: string) 
 }
 
 export async function saveGuestbookPost(body: string, media: File[], postId?: string, turnstileToken?: string) {
+  const createdPost = !postId
   const result = await invoke<{ id: string }>(postId ? 'edit-guestbook' : 'create-guestbook', { postId, body, turnstileToken })
-  for (const file of media) await uploadCommunityImage(file, 'guestbook', result.id, turnstileToken)
+  let uploadedPhotoCount = 0
+  for (const file of media) {
+    try {
+      await uploadCommunityImage(file, 'guestbook', result.id, turnstileToken)
+      uploadedPhotoCount += 1
+    } catch (error) {
+      throw new GuestbookPhotoUploadError(result.id, createdPost, uploadedPhotoCount, media.length, error)
+    }
+  }
   return result
 }
 
@@ -91,20 +172,40 @@ export async function saveScheduleReview(scheduleId: string, body: string, ratin
 async function uploadCommunityImage(file: File, parentType: 'guestbook' | 'review', parentId: string, turnstileToken?: string) {
   const client = requireClient()
   const { data: { session } } = await client.auth.getSession()
-  if (!session) throw new Error('사진 업로드는 로그인 후 이용할 수 있습니다.')
+  if (!session) throw new CommunityRequestError('AUTH_REQUIRED', '사진 업로드는 로그인 후 이용할 수 있습니다.')
   const formData = new FormData()
   formData.set('action', 'upload-image')
   formData.set('parentType', parentType)
   formData.set('parentId', parentId)
   if (turnstileToken) formData.set('turnstileToken', turnstileToken)
-  formData.set('file', await prepareCommunityImage(file))
-  const response = await fetch(`${supabaseConfig.url}/functions/v1/community-api`, {
-    method: 'POST',
-    headers: { apikey: supabaseConfig.publishableKey!, Authorization: `Bearer ${session.access_token}` },
-    body: formData,
-  })
-  const data = await response.json() as { error?: string }
-  if (!response.ok) throw new Error(data.error ?? '사진 업로드에 실패했습니다.')
+  try { formData.set('file', await prepareCommunityImage(file)) }
+  catch (error) {
+    throw new CommunityRequestError('IMAGE_PREPARATION_FAILED', error instanceof Error ? error.message : '사진을 업로드용으로 준비하지 못했습니다.')
+  }
+
+  let response: Response
+  try {
+    response = await fetch(`${supabaseConfig.url}/functions/v1/community-api`, {
+      method: 'POST',
+      headers: { apikey: supabaseConfig.publishableKey!, Authorization: `Bearer ${session.access_token}` },
+      body: formData,
+    })
+  } catch {
+    throw new CommunityRequestError('UPLOAD_NETWORK_ERROR', '사진 전송 중 서버와 연결이 끊겼습니다. 남겨진 글에서 사진이 등록됐는지 확인해 주세요.')
+  }
+
+  const rawResponse = await response.text().catch(() => '')
+  let data: { code?: unknown; error?: unknown } | null = null
+  try { data = rawResponse ? JSON.parse(rawResponse) as { code?: unknown; error?: unknown } : null } catch { /* 비 JSON 응답은 상태 코드로 안내합니다. */ }
+  if (!response.ok) {
+    const message = typeof data?.error === 'string'
+      ? data.error
+      : response.status >= 500
+        ? '사진 저장 서버에서 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+        : `사진 업로드에 실패했습니다. (HTTP ${response.status})`
+    const code = typeof data?.code === 'string' ? data.code : `UPLOAD_HTTP_${response.status}`
+    throw new CommunityRequestError(code, message, response.status)
+  }
 }
 
 async function prepareCommunityImage(file: File): Promise<File> {
@@ -142,6 +243,10 @@ export async function deleteCommunityContent(contentType: 'guestbook' | 'review'
   return invoke('delete-content', { contentType, contentId })
 }
 
+export async function hideCommunityContent(contentType: 'guestbook' | 'review', contentId: string, reason: string) {
+  return invoke('hide-content', { contentType, contentId, reason })
+}
+
 export async function deleteCommunityMedia(mediaId: string) {
   return invoke('delete-media', { mediaId })
 }
@@ -158,12 +263,24 @@ export async function getAdminHiddenContent() {
   return invoke<HiddenCommunityContent[]>('get-admin-hidden-content')
 }
 
+export async function getMyCommunityContent() {
+  return invoke<MyCommunityContent[]>('get-my-content')
+}
+
+export async function submitCommunityAppeal(contentType: 'guestbook' | 'review', contentId: string, reason: string) {
+  return invoke('submit-appeal', { contentType, contentId, reason })
+}
+
+export async function resolveCommunityAppeal(appealId: string, decision: 'approve' | 'reject', reason: string) {
+  return invoke('resolve-appeal', { appealId, decision, reason })
+}
+
 export async function restoreHiddenCommunityContent(contentType: 'guestbook' | 'review', contentId: string) {
   return invoke('restore-hidden-content', { contentType, contentId })
 }
 
-export async function moderateReport(reportId: string, decision: 'dismiss' | 'hide' | 'delete') {
-  return invoke('moderate-report', { reportId, decision })
+export async function moderateReport(reportId: string, decision: 'dismiss' | 'hide', reason = '') {
+  return invoke('moderate-report', { reportId, decision, reason })
 }
 
 export async function getAdminCommunitySettings(): Promise<AdminCommunitySettings> {
