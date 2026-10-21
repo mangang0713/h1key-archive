@@ -40,13 +40,22 @@
 .site-brand-mark { display: block; width: 28px; height: 28px; flex: none; }
 .site-navigation { display: flex; align-items: center; gap: 6px; }
 .site-navigation a,
-.site-account-link, .site-logout-button { min-height: 40px; display: inline-flex; align-items: center; padding: 0 13px; border: 0; border-radius: 10px; color: #5b6071; font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
-.site-navigation a:hover,
-.site-account-link:hover, .site-logout-button:hover { background: #f1edfb; color: #4c1d95; }
-.site-logout-button:disabled { opacity: .6; cursor: wait; }
-.site-navigation a:focus-visible, .site-account-link:focus-visible, .site-logout-button:focus-visible { outline: 3px solid #9b7be0; outline-offset: 2px; }
+.site-account-link { min-height: 40px; display: inline-flex; align-items: center; padding: 0 13px; border: 0; border-radius: 10px; color: #5b6071; font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
+.site-navigation a:hover, .site-account-link:hover { background: #f1edfb; color: #4c1d95; }
+.site-navigation a:focus-visible, .site-account-link:focus-visible { outline: 3px solid #9b7be0; outline-offset: 2px; }
 .site-navigation a.active { color: #5b21b6; background: #f1edfb; }
-.site-account { justify-self: end; display: flex; flex-direction: column; align-items: flex-end; }
+.site-account { position: relative; justify-self: end; display: flex; flex-direction: column; align-items: flex-end; }
+.profile-menu-trigger { display: grid; width: 42px; height: 42px; place-items: center; padding: 0; border: 1px solid #e2dcef; border-radius: 50%; background: #f4f0fb; cursor: pointer; }
+.profile-menu-trigger:hover { border-color: #cbb8ec; background: #eee7fa; }
+.profile-menu-trigger:focus-visible { outline: 3px solid #9b7be0; outline-offset: 3px; }
+.profile-avatar { position: relative; display: grid; width: 100%; height: 100%; place-items: center; overflow: hidden; border-radius: 50%; }
+.profile-avatar svg { width: 23px; height: 23px; fill: #8b72b2; stroke: #8b72b2; stroke-width: 1.5; stroke-linecap: round; }
+.profile-avatar img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+.profile-menu { position: absolute; top: calc(100% + 9px); right: 0; z-index: 20; display: grid; width: 210px; padding: 7px; border: 1px solid #e5e1ef; border-radius: 14px; background: #fff; box-shadow: 0 14px 36px rgb(25 24 45 / 16%); }
+.profile-menu .site-account-link, .profile-menu-logout { width: 100%; min-height: 44px; box-sizing: border-box; justify-content: flex-start; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #4a4d5c; font: inherit; font-size: 14px; font-weight: 650; text-align: left; text-decoration: none; cursor: pointer; }
+.profile-menu .site-account-link:hover, .profile-menu-logout:hover { background: #f1edfb; color: #4c1d95; }
+.profile-menu-logout:disabled { opacity: .6; cursor: wait; }
+.profile-menu .site-account-link:focus-visible, .profile-menu-logout:focus-visible { outline: 3px solid #9b7be0; outline-offset: 1px; }
 .site-account-actions { display: flex; align-items: center; gap: 2px; }
 .site-account-error { max-width: min(320px, 80vw); color: #a61b2b; font-size: 11px; text-align: right; }
 .site-account-loading { padding: 0 10px; color: #72778a; font-size: 12px; }
@@ -56,9 +65,10 @@
 .site-footer a { min-height: 36px; display: inline-flex; align-items: center; color: #656a7a; font-size: 11px; text-decoration: none; }
 
 @media (max-width: 600px) {
-  .site-header { grid-template-columns: 1fr auto auto; gap: 6px; min-height: 54px; padding-right: max(10px, env(safe-area-inset-right, 0px)); }
-  .site-brand { gap: 6px; font-size: 11px; letter-spacing: .02em; }
+  .site-header { grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px; min-height: 54px; padding: 0 max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); }
+  .site-brand { gap: 6px; font-size: 11px; letter-spacing: .02em; white-space: nowrap; }
   .site-brand-mark { width: 24px; height: 24px; }
-  .site-navigation { gap: 0; }
-  .site-navigation a, .site-account-link, .site-logout-button { min-height: 40px; padding: 0 8px; font-size: 12px; }
+  .site-navigation { gap: 0; flex-wrap: nowrap; }
+  .site-navigation a { min-height: 40px; padding: 0 7px; font-size: 12px; white-space: nowrap; }
+  .profile-menu-trigger { width: 40px; height: 40px; }
 }

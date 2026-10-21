@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthProvider'
 import { getMyCommunityContent, submitCommunityAppeal } from '../features/community/api'
@@ -20,6 +20,9 @@ function MyCommunityPostsPage() {
   const [appealReason, setAppealReason] = useState('')
   const [busyId, setBusyId] = useState<string>()
   const [message, setMessage] = useState('')
+  const [appealSubmitted, setAppealSubmitted] = useState(false)
+  const [activeTab, setActiveTab] = useState<'all' | 'hidden' | 'pending' | 'results'>('all')
+  const appealConfirmationRef = useRef<HTMLDialogElement>(null)
 
   const refresh = useCallback(async () => {
     if (!configured || !user) return
@@ -30,6 +33,13 @@ function MyCommunityPostsPage() {
   // Fetching begins after mount; state changes happen when the request settles.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void refresh() }, [refresh])
+
+  useEffect(() => {
+    const dialog = appealConfirmationRef.current
+    if (!dialog) return
+    if (appealSubmitted && !dialog.open) dialog.showModal()
+    if (!appealSubmitted && dialog.open) dialog.close()
+  }, [appealSubmitted])
 
   async function sendAppeal(post: MyCommunityContent) {
     if (appealReason.trim().length < 2) {
@@ -42,7 +52,7 @@ function MyCommunityPostsPage() {
       await submitCommunityAppeal(post.content_type, post.id, appealReason.trim())
       setAppealTarget(undefined)
       setAppealReason('')
-      setMessage('이의제기를 접수했습니다. 검토가 끝날 때까지 게시물은 보존됩니다.')
+      setAppealSubmitted(true)
       await refresh()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '이의제기를 접수하지 못했습니다.')
@@ -50,9 +60,26 @@ function MyCommunityPostsPage() {
   }
 
   const [now] = useState(() => Date.now())
+  const tabs = [
+    { id: 'all', label: '전체 게시글', count: posts.length },
+    { id: 'hidden', label: '숨겨진 게시글', count: posts.filter((post) => post.status === 'hidden' || post.status === 'purging').length },
+    { id: 'pending', label: '이의제기 중인 게시글', count: posts.filter((post) => post.appeal?.status === 'pending').length },
+    { id: 'results', label: '이의제기 결과', count: posts.filter((post) => post.appeal?.status === 'approved' || post.appeal?.status === 'rejected').length },
+  ] as const
+  const visiblePosts = posts.filter((post) => {
+    if (activeTab === 'hidden') return post.status === 'hidden' || post.status === 'purging'
+    if (activeTab === 'pending') return post.appeal?.status === 'pending'
+    if (activeTab === 'results') return post.appeal?.status === 'approved' || post.appeal?.status === 'rejected'
+    return true
+  })
+  const emptyMessages = {
+    all: '아직 작성한 게시글이 없습니다.',
+    hidden: '숨겨진 게시글이 없습니다.',
+    pending: '검토 중인 이의제기가 없습니다.',
+    results: '확정된 이의제기 결과가 없습니다.',
+  }
   return (
     <section className="community-page">
-      <Link className="back-link" to="/account">← 내 계정</Link>
       <div className="community-heading">
         <span className="community-eyebrow">MY POSTS</span>
         <h1>내 게시글</h1>
@@ -61,8 +88,18 @@ function MyCommunityPostsPage() {
       {!configured && <div className="community-alert">Supabase 설정이 필요합니다.</div>}
       {loading && <p className="community-muted">로그인 상태를 확인하고 있습니다.</p>}
       {!loading && configured && !user && <div className="community-alert">내 게시글을 보려면 <Link to="/account?returnTo=/account/posts">로그인</Link>해 주세요.</div>}
-      {configured && user && <div className="guestbook-list">
-        {posts.map((post) => {
+      {configured && user && <>
+        <div className="my-post-tabs" role="group" aria-label="내 게시글 분류">
+          {tabs.map((tab) => <button
+            className={`my-post-tab${activeTab === tab.id ? ' is-active' : ''}`}
+            type="button"
+            key={tab.id}
+            aria-pressed={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+          >{tab.label}<span>{tab.count}</span></button>)}
+        </div>
+        <div className="guestbook-list">
+        {visiblePosts.map((post) => {
           const appealOpen = Boolean(post.purge_after && now < new Date(post.purge_after).getTime())
           return <article className="user-post-card moderation-post-card" key={`${post.content_type}-${post.id}`}>
             <header>
@@ -94,9 +131,23 @@ function MyCommunityPostsPage() {
             </form> : <button className="secondary-button appeal-open-button" type="button" onClick={() => { setAppealTarget(post.id); setAppealReason(''); setMessage('') }}>이의제기</button> : post.status === 'hidden' && <p className="community-small">이의제기 기간이 끝났습니다. 영구 삭제 처리를 기다리는 중입니다.</p>}
           </article>
         })}
-        {posts.length === 0 && <p className="empty-state">아직 작성한 게시글이 없습니다.</p>}
-      </div>}
+        {visiblePosts.length === 0 && <p className="empty-state">{emptyMessages[activeTab]}</p>}
+        </div>
+      </>}
       {message && <p className="community-message" role="status">{message}</p>}
+      <dialog
+        className="report-confirmation"
+        ref={appealConfirmationRef}
+        aria-labelledby="appeal-confirmation-title"
+        onClose={() => setAppealSubmitted(false)}
+      >
+        <div className="report-dialog-content report-confirmation-content">
+          <span className="report-confirmation-icon" aria-hidden="true">✓</span>
+          <h2 id="appeal-confirmation-title">이의제기를 접수했어요</h2>
+          <p>검토가 끝날 때까지 게시물과 사진은 보존됩니다. 진행 상태는 내 게시글의 이의제기 탭에서 확인할 수 있어요.</p>
+          <button className="primary-button" type="button" onClick={() => setAppealSubmitted(false)}>확인</button>
+        </div>
+      </dialog>
     </section>
   )
 }

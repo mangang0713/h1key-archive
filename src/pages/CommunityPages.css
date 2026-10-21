@@ -97,6 +97,12 @@
 .admin-review-tab span { display: grid; min-width: 22px; height: 22px; place-items: center; padding: 0 5px; border-radius: 99px; background: #f0edf7; color: #574a72; font-size: 11px; }
 .admin-review-tab.is-active { border-bottom-color: #6d28d9; color: #4c1d95; }
 .admin-review-tab:focus-visible { outline: 3px solid #9b7be0; outline-offset: 2px; }
+.my-post-tabs { display: flex; gap: 8px; margin: 24px 0 18px; overflow-x: auto; border-bottom: 1px solid #e5e7ef; scrollbar-width: none; }
+.my-post-tabs::-webkit-scrollbar { display: none; }
+.my-post-tab { display: inline-flex; flex: 0 0 auto; min-height: 44px; align-items: center; gap: 8px; padding: 0 13px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #666b7b; font: inherit; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.my-post-tab span { display: grid; min-width: 22px; height: 22px; place-items: center; padding: 0 5px; border-radius: 99px; background: #f0edf7; color: #574a72; font-size: 11px; }
+.my-post-tab.is-active { border-bottom-color: #6d28d9; color: #4c1d95; }
+.my-post-tab:focus-visible { outline: 3px solid #9b7be0; outline-offset: 2px; }
 .admin-hidden-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
 .admin-hidden-photo-grid figure { position: relative; min-width: 0; margin: 0; }
 .admin-hidden-photo-grid img { display: block; width: 100%; aspect-ratio: 1; border-radius: 10px; background: #f1f1f5; object-fit: cover; }
