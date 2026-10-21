@@ -78,7 +78,10 @@
 .load-more { display: block; margin: 20px auto; }
 .empty-state { padding: 32px 16px; border: 1px dashed var(--color-border); border-radius: 14px; color: var(--color-muted); text-align: center; }
 .back-link { display: inline-flex; min-height: 42px; align-items: center; margin: -8px 0 16px; color: var(--color-brand-green); font-weight: 500; text-decoration: none; }
-.schedule-time { color: var(--color-muted); }
+.schedule-heading-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 12px; }
+.schedule-heading-meta > p { margin: 0; }
+.schedule-time { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-section); color: var(--color-muted); font-size: 12px; line-height: 1.4; }
+.schedule-time svg { width: 13px; height: 13px; flex: 0 0 13px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.4; }
 .schedule-setlist-card ol { padding-left: 24px; line-height: 1.9; }
 .schedule-setlist-card .schedule-setlist { display: grid; gap: 8px; padding: 0; margin: 12px 0 0; list-style: none; counter-reset: schedule-song; }
 .schedule-setlist-card .schedule-setlist li { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; min-height: 46px; box-sizing: border-box; padding: 9px 12px 9px 46px; border: 1px solid var(--color-border); border-radius: 11px; background: var(--color-page); line-height: 1.45; counter-increment: schedule-song; }

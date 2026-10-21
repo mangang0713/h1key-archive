@@ -288,9 +288,14 @@ function SchedulePage() {
       <div className="community-heading">
         <span className="community-eyebrow">SCHEDULE RECORD</span>
         <h1>{schedule.title}</h1>
-        <p>{schedule.date.replaceAll('-', '.')} · {location?.name ?? (schedule.eventFormat === 'online' ? '온라인' : '장소 미확인')}</p>
+        <div className="schedule-heading-meta">
+          <p>{schedule.date.replaceAll('-', '.')} · {location?.name ?? (schedule.eventFormat === 'online' ? '온라인' : '장소 미확인')}</p>
+          {schedule.startTime && <span className="schedule-time">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" /><path d="M8 4.5v3.8l2.4 1.4" /></svg>
+            <span>시작 {schedule.startTime}</span>
+          </span>}
+        </div>
       </div>
-      {schedule.startTime && <p className="schedule-time">시작 시간 {schedule.startTime}</p>}
       {schedule.eventFormat !== 'online' && (schedule.setlist.length > 0 || schedule.setlistStatus === 'none') && <section className="schedule-setlist-card"><h2>세트리스트</h2>
         {schedule.setlistStatus === 'none'
           ? <p className="community-small">행사에서 진행된 곡이 없습니다.</p>
@@ -305,7 +310,6 @@ function SchedulePage() {
       </section>}
       <div className="schedule-community-actions">
         <button className={`like-button${liked ? ' is-liked' : ''}`} type="button" disabled={!user || busy} onClick={() => void handleLike()} aria-pressed={liked}>♥ {liked ? '좋아요' : '좋아요'} · {likeCount}</button>
-        {!user && <span>좋아요와 후기를 남기려면 <Link to={`/account?returnTo=/schedule/${currentSchedule.id}`}>로그인</Link>해 주세요.</span>}
       </div>
       <section className="schedule-reviews">
         <div className="community-list-heading"><h2>후기</h2><span>{visibleReviews.length}개 표시</span></div>
