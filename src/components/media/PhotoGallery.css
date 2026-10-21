@@ -34,7 +34,7 @@
 
 .archive-photo-thumb:focus-visible,
 .archive-photo-viewer button:focus-visible {
-  outline: 3px solid #8b5cf6;
+  outline: 3px solid var(--color-brand-lime);
   outline-offset: 2px;
 }
 

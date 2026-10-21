@@ -17,7 +17,7 @@
 }
 
 .time-travel-panel:focus-visible {
-  outline: 3px solid #fbbf24;
+  outline: 3px solid var(--color-brand-lime);
   outline-offset: 3px;
 }
 
@@ -32,7 +32,7 @@
   grid-column: 1;
   grid-row: 1;
   margin: 0;
-  color: #99f6e4;
+  color: var(--color-brand-lime);
   font-size: 11px;
   font-weight: 500;
 }
@@ -149,13 +149,13 @@
 }
 
 .time-travel-speed button[aria-pressed='true'] {
-  border-color: #5eead4;
-  background: rgb(13 148 136 / 35%);
-  color: #ccfbf1;
+  border-color: var(--color-brand-lime);
+  background: rgb(var(--brand-green-rgb) / 55%);
+  color: var(--color-brand-lime);
 }
 
 .time-travel-speed button:focus-visible {
-  outline: 3px solid #fbbf24;
+  outline: 3px solid var(--color-brand-lime);
   outline-offset: 2px;
 }
 
@@ -165,18 +165,18 @@
 }
 
 .time-travel-controls .time-travel-play {
-  border-color: transparent;
-  background: #0f766e;
+  border-color: var(--color-brand-lime);
+  background: var(--color-brand-green);
   color: #fff;
 }
 
 .time-travel-controls .time-travel-play:hover {
-  background: #115e59;
+  background: var(--color-brand-green-hover);
 }
 
 .time-travel-controls button:focus-visible,
 .time-travel-close:focus-visible {
-  outline: 3px solid #fbbf24;
+  outline: 3px solid var(--color-brand-lime);
   outline-offset: 2px;
 }
 

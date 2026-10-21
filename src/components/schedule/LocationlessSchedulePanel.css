@@ -10,17 +10,17 @@
   max-height: min(64dvh, 560px);
   overflow: auto;
   padding: 16px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: #fff;
-  color: #111;
+  background: var(--color-surface);
+  color: var(--color-text);
   line-height: 1.5;
   box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
 }
 
 .locationless-panel:focus-visible,
 .locationless-close:focus-visible {
-  outline: 3px solid #111;
+  outline: 3px solid var(--color-brand-green);
   outline-offset: 3px;
 }
 
@@ -45,18 +45,18 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #111;
+  color: var(--color-text);
   font-size: 28px;
   cursor: pointer;
 }
 
 .locationless-close:hover {
-  background: #f5f3ff;
+  background: var(--color-section);
 }
 
 .locationless-demo-notice {
   margin: 6px 0 12px;
-  color: #555;
+  color: var(--color-muted);
   font-size: 12px;
 }
 
@@ -71,9 +71,9 @@
 }
 
 .locationless-panel .schedule-choice {
-  background: #f8f7fc;
+  background: var(--color-page);
 }
 
 .locationless-panel .schedule-choice:hover {
-  background: #ede9fe;
+  background: var(--color-section);
 }
