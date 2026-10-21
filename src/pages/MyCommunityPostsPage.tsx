@@ -1,0 +1,104 @@
+import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../features/auth/AuthProvider'
+import { getMyCommunityContent, submitCommunityAppeal } from '../features/community/api'
+import type { MyCommunityContent } from '../features/community/types'
+import './CommunityPages.css'
+
+function formatDate(value: string | null) {
+  if (!value) return '확인 중'
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul', hourCycle: 'h23',
+  }).format(new Date(value))
+}
+
+function MyCommunityPostsPage() {
+  const { user, loading, configured } = useAuth()
+  const [posts, setPosts] = useState<MyCommunityContent[]>([])
+  const [appealTarget, setAppealTarget] = useState<string>()
+  const [appealReason, setAppealReason] = useState('')
+  const [busyId, setBusyId] = useState<string>()
+  const [message, setMessage] = useState('')
+
+  const refresh = useCallback(async () => {
+    if (!configured || !user) return
+    try { setPosts(await getMyCommunityContent()) }
+    catch (error) { setMessage(error instanceof Error ? error.message : '내 게시글을 불러오지 못했습니다.') }
+  }, [configured, user])
+
+  // Fetching begins after mount; state changes happen when the request settles.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void refresh() }, [refresh])
+
+  async function sendAppeal(post: MyCommunityContent) {
+    if (appealReason.trim().length < 2) {
+      setMessage('이의제기 내용을 두 글자 이상 적어 주세요.')
+      return
+    }
+    setBusyId(post.id)
+    setMessage('')
+    try {
+      await submitCommunityAppeal(post.content_type, post.id, appealReason.trim())
+      setAppealTarget(undefined)
+      setAppealReason('')
+      setMessage('이의제기를 접수했습니다. 검토가 끝날 때까지 게시물은 보존됩니다.')
+      await refresh()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '이의제기를 접수하지 못했습니다.')
+    } finally { setBusyId(undefined) }
+  }
+
+  const [now] = useState(() => Date.now())
+  return (
+    <section className="community-page">
+      <Link className="back-link" to="/account">← 내 계정</Link>
+      <div className="community-heading">
+        <span className="community-eyebrow">MY POSTS</span>
+        <h1>내 게시글</h1>
+        <p>공개 중인 글과 관리자 조치로 숨겨진 글을 확인할 수 있습니다.</p>
+      </div>
+      {!configured && <div className="community-alert">Supabase 설정이 필요합니다.</div>}
+      {loading && <p className="community-muted">로그인 상태를 확인하고 있습니다.</p>}
+      {!loading && configured && !user && <div className="community-alert">내 게시글을 보려면 <Link to="/account?returnTo=/account/posts">로그인</Link>해 주세요.</div>}
+      {configured && user && <div className="guestbook-list">
+        {posts.map((post) => {
+          const appealOpen = Boolean(post.purge_after && now < new Date(post.purge_after).getTime())
+          return <article className="user-post-card moderation-post-card" key={`${post.content_type}-${post.id}`}>
+            <header>
+              <strong>{post.content_type === 'guestbook' ? '방명록' : '일정 후기'} · {post.status === 'hidden' ? '숨김' : post.status === 'purging' ? '삭제 처리 중' : '공개'}</strong>
+              <time dateTime={post.created_at}>{formatDate(post.created_at)}</time>
+            </header>
+            {post.status !== 'published' && <div className="moderation-notice">
+              <p><b>숨김 사유</b> · {post.moderation_reason ?? '운영자가 검토 중입니다.'}</p>
+              <p>숨김 시각 {formatDate(post.hidden_at)} · 삭제 예정 {formatDate(post.purge_after)}</p>
+            </div>}
+            {post.rating !== null && <p className="review-rating" aria-label={`${post.rating}/5점`}>{'★'.repeat(post.rating)}{'☆'.repeat(5 - post.rating)}</p>}
+            <p className="user-post-body">{post.body}</p>
+            {!!post.media.length && <div className="user-photo-grid">{post.media.map((media) => media.signed_url && <figure className="user-photo-item" key={media.id}>
+              <img src={media.signed_url} loading="lazy" alt="내 게시글 첨부 사진" />
+            </figure>)}</div>}
+            {post.status === 'purging' ? <p className="community-small">보관 기간이 지나 사진과 게시물을 영구 삭제하고 있습니다.</p> : post.appeal ? <div className="appeal-status">
+              <strong>{post.appeal.status === 'pending' ? '이의제기 검토 중' : post.appeal.status === 'approved' ? '이의제기 승인 · 게시물 복원' : '이의제기 기각'}</strong>
+              <p><b>제출한 내용</b> · {post.appeal.reason}</p>
+              {post.appeal.decision_reason && <p><b>운영자 답변</b> · {post.appeal.decision_reason}</p>}
+              {post.appeal.status === 'pending' && <p>검토가 끝날 때까지 게시물과 사진은 삭제되지 않습니다.</p>}
+            </div> : post.status === 'hidden' && appealOpen ? appealTarget === post.id ? <form className="community-form appeal-form" onSubmit={(event) => { event.preventDefault(); void sendAppeal(post) }}>
+              <label htmlFor={`appeal-${post.id}`}>이의제기 내용</label>
+              <textarea id={`appeal-${post.id}`} value={appealReason} maxLength={1000} rows={4} required placeholder="숨김 조치를 다시 검토해 달라는 이유를 적어 주세요." onChange={(event) => setAppealReason(event.target.value)} />
+              <span className="community-small">7일 안에 제출할 수 있습니다. 제출하면 검토가 끝날 때까지 게시물을 보존합니다.</span>
+              <div className="post-actions">
+                <button className="secondary-button" type="button" disabled={busyId === post.id} onClick={() => { setAppealTarget(undefined); setAppealReason('') }}>취소</button>
+                <button className="primary-button" type="submit" disabled={busyId === post.id}>{busyId === post.id ? '접수 중…' : '이의제기 제출'}</button>
+              </div>
+            </form> : <button className="secondary-button appeal-open-button" type="button" onClick={() => { setAppealTarget(post.id); setAppealReason(''); setMessage('') }}>이의제기</button> : post.status === 'hidden' && <p className="community-small">이의제기 기간이 끝났습니다. 영구 삭제 처리를 기다리는 중입니다.</p>}
+          </article>
+        })}
+        {posts.length === 0 && <p className="empty-state">아직 작성한 게시글이 없습니다.</p>}
+      </div>}
+      {message && <p className="community-message" role="status">{message}</p>}
+    </section>
+  )
+}
+
+export default MyCommunityPostsPage

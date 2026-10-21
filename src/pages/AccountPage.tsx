@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth, type SocialProvider } from '../features/auth/AuthProvider'
 import { deleteAccount, getProfile, updateProfile } from '../features/community/api'
 import './CommunityPages.css'
@@ -91,6 +91,7 @@ function AccountPage() {
       {!loading && user && (
         <div className="account-card">
           <h2>프로필</h2>
+          <Link className="account-posts-link" to="/account/posts">내 게시글과 이의제기 확인 →</Link>
           <p className="account-current-name">현재 공개 표시 이름: <strong>{savedDisplayName || '아직 설정되지 않음'}</strong></p>
           <form className="community-form" onSubmit={(event) => void handleSaveProfile(event)}>
             <label htmlFor="display-name">공개 표시 이름</label>

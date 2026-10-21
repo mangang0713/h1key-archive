@@ -4,7 +4,7 @@ import { locations } from '../data/locations'
 import { schedules } from '../data/schedules'
 import { songs } from '../data/songs'
 import { useAuth } from '../features/auth/AuthProvider'
-import { acceptCommunityTerms, deleteCommunityContent, deleteCommunityMedia, getOwnScheduleReview, getScheduleReactions, getScheduleReviews, reportCommunityContent, saveScheduleReview, toggleScheduleLike } from '../features/community/api'
+import { acceptCommunityTerms, deleteCommunityContent, deleteCommunityMedia, getOwnScheduleReview, getScheduleReactions, getScheduleReviews, hideCommunityContent, reportCommunityContent, saveScheduleReview, toggleScheduleLike } from '../features/community/api'
 import { claimHessxlAdmin, isCurrentArchiveAdmin } from '../features/community/adminApi'
 import type { CommunityMedia, ScheduleReview } from '../features/community/types'
 import TurnstileWidget from '../components/security/TurnstileWidget'
@@ -24,6 +24,7 @@ function SchedulePage() {
   const [likeCount, setLikeCount] = useState(0)
   const [liked, setLiked] = useState(false)
   const [ownReviewId, setOwnReviewId] = useState<string>()
+  const [reportedReviews, setReportedReviews] = useState<{ userId: string | undefined; ids: Set<string> }>(() => ({ userId: undefined, ids: new Set() }))
   const [body, setBody] = useState('')
   const [rating, setRating] = useState(5)
   const [files, setFiles] = useState<File[]>([])
@@ -104,7 +105,21 @@ function SchedulePage() {
   }
 
   async function handleDelete(reviewId: string) {
-    if (!window.confirm(isAdmin ? '관리자 권한으로 이 후기와 첨부 사진을 모두 삭제할까요?' : '후기를 삭제할까요?')) return
+    const review = reviews.find((item) => item.id === reviewId)
+    if (!review) return
+    const moderatingAnotherUsersPost = isAdmin && !review.is_mine
+    if (moderatingAnotherUsersPost) {
+      const reason = window.prompt('작성자에게 표시할 숨김 사유를 입력해 주세요. (최대 1000자)')?.trim()
+      if (!reason) return
+      if (reason.length > 1000) { setMessage('숨김 사유는 1000자 이내로 입력해 주세요.'); return }
+      try {
+        await hideCommunityContent('review', review.id, reason)
+        await refresh()
+        setMessage('후기를 숨겼습니다. 작성자는 내 게시글에서 7일 안에 이의제기할 수 있습니다.')
+      } catch (error) { setMessage(error instanceof Error ? error.message : '후기를 숨기지 못했습니다.') }
+      return
+    }
+    if (!window.confirm('이 후기와 첨부 사진을 영구 삭제할까요? 삭제한 후기와 신고 기록은 복구할 수 없습니다.')) return
     try { await deleteCommunityContent('review', reviewId); await refresh() }
     catch (error) { setMessage(error instanceof Error ? error.message : '후기를 삭제하지 못했습니다.') }
   }
@@ -128,11 +143,21 @@ function SchedulePage() {
   async function handleReport(review: ScheduleReview) {
     const reason = window.prompt('신고 사유를 선택해 주세요: 스팸, 괴롭힘, 개인정보, 기타')
     if (!reason) return
-    try { await reportCommunityContent('review', review.id, reason, ''); setMessage('신고를 접수했습니다.') }
+    try {
+      await reportCommunityContent('review', review.id, reason, '')
+      setReportedReviews((current) => ({
+        userId: user?.id,
+        ids: new Set(current.userId === user?.id ? current.ids : []).add(review.id),
+      }))
+      setMessage('신고를 접수했습니다. 이 후기는 내 목록에서 숨겼습니다.')
+    }
     catch (error) { setMessage(error instanceof Error ? error.message : '신고를 접수하지 못했습니다.') }
   }
 
   const isAdmin = Boolean(user && adminCheck?.userId === user.id && adminCheck.isAdmin)
+  const canReportContent = Boolean(user && adminCheck?.userId === user.id && !isAdmin)
+  const reportedReviewIds = reportedReviews.userId === user?.id ? reportedReviews.ids : new Set<string>()
+  const visibleReviews = reviews.filter((review) => !reportedReviewIds.has(review.id))
 
   return (
     <section className="community-page schedule-community-page">
@@ -153,7 +178,7 @@ function SchedulePage() {
         {!user && <span>좋아요와 후기를 남기려면 <Link to={`/account?returnTo=/schedule/${currentSchedule.id}`}>로그인</Link>해 주세요.</span>}
       </div>
       <section className="schedule-reviews">
-        <div className="community-list-heading"><h2>후기</h2><span>{reviews.length}개 표시</span></div>
+        <div className="community-list-heading"><h2>후기</h2><span>{visibleReviews.length}개 표시</span></div>
         {user && (!ownReviewId || editingId) && <form className="community-form review-form" onSubmit={(event) => void submitReview(event)}>
           <label htmlFor="review-body">다녀온 느낌을 남겨 주세요</label>
           <div className="rating-field"><label htmlFor="review-rating">별점</label><select id="review-rating" value={rating} onChange={(event) => setRating(Number(event.target.value))}>{[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{'★'.repeat(value)} ({value}점)</option>)}</select></div>
@@ -166,19 +191,20 @@ function SchedulePage() {
           {editingId && <button className="text-button" type="button" onClick={() => { setEditingId(undefined); setBody(''); setFiles([]) }}>수정 취소</button>}
         </form>}
         {!user && <p className="empty-state">후기를 작성하려면 로그인이 필요합니다.</p>}
-        {reviews.map((review) => <article className="user-post-card" key={review.id}>
+        {user && visibleReviews.length === 0 && <p className="empty-state">표시할 후기가 없습니다. 신고한 후기는 내 목록에서 숨겨집니다.</p>}
+        {visibleReviews.map((review) => <article className="user-post-card" key={review.id}>
           <header><strong>{review.author_name}</strong><span className="review-rating" aria-label={`${review.rating}점`}>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span><time dateTime={review.created_at}>{new Date(review.created_at).toLocaleDateString('ko-KR')}</time></header>
           <p className="user-post-body">{review.body}</p>
           {!!review.media?.length && <div className="user-photo-grid">{review.media.map((media) => media.signed_url && <figure className="user-photo-item" key={media.id}>
             <img src={media.signed_url} loading="lazy" alt="후기 첨부 사진" />
-            {isAdmin && <button className="admin-photo-delete" type="button" aria-label="후기 사진 삭제" onClick={() => void removePhoto(media)}>사진 삭제</button>}
+            {user && (review.is_mine || isAdmin) && <button className="admin-photo-delete" type="button" aria-label="후기 사진 삭제" onClick={() => void removePhoto(media)}>사진 삭제</button>}
           </figure>)}</div>}
           {!!review.media?.length && !review.media.some((media) => media.signed_url) && <p className="community-small">사진을 지금은 불러올 수 없습니다.</p>}
           {user && (review.is_mine || isAdmin) && <div className="post-actions">
             {review.is_mine && <button className="text-button" type="button" onClick={() => { setEditingId(review.id); setBody(review.body); setRating(review.rating) }}>수정하기</button>}
-            <button className="text-button danger-text" type="button" onClick={() => void handleDelete(review.id)}>{isAdmin && !review.is_mine ? '관리자 삭제' : '삭제'}</button>
+            <button className="text-button danger-text" type="button" onClick={() => void handleDelete(review.id)}>{isAdmin && !review.is_mine ? '숨김 처리' : '삭제'}</button>
           </div>}
-          {user && !review.is_mine && <button className="text-button" type="button" onClick={() => void handleReport(review)}>신고</button>}
+          {canReportContent && !review.is_mine && <button className="text-button" type="button" onClick={() => void handleReport(review)}>신고</button>}
         </article>)}
         {hasMoreReviews && <button className="secondary-button load-more" type="button" onClick={() => void loadMoreReviews()}>후기 더 보기</button>}
       </section>

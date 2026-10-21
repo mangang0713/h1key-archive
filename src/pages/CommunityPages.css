@@ -9,6 +9,8 @@
 .account-card h2, .schedule-setlist-card h2 { margin: 0 0 8px; font-size: 19px; }
 .account-card > p { color: #6a6e7d; line-height: 1.6; }
 .account-card > .account-current-name { margin: 0 0 14px; color: #6a6e7d; font-size: 14px; line-height: 1.6; }
+.account-posts-link { display: inline-flex; min-height: 40px; align-items: center; margin: 0 0 12px; color: #5b21b6; font-size: 14px; font-weight: 750; text-decoration: none; }
+.account-posts-link:hover { text-decoration: underline; }
 .account-current-name strong { color: #28263a; overflow-wrap: anywhere; }
 .provider-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 20px 0; }
 .provider-button, .primary-button, .secondary-button, .danger-button, .like-button { min-height: 44px; padding: 10px 15px; border: 1px solid #d9dbe5; border-radius: 11px; background: #fff; color: #25263a; font: inherit; font-weight: 700; cursor: pointer; transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease; }
@@ -31,6 +33,9 @@
 .danger-text { color: #a61b2b; }
 .community-small { color: #777b88; font-size: 12px; line-height: 1.55; }
 .community-message { color: #3e2a67; line-height: 1.55; }
+.community-error-details { display: grid; gap: 5px; margin: 12px 0; padding: 12px 14px; border: 1px solid #efc6cc; border-radius: 11px; background: #fff7f7; color: #7d2632; font-size: 13px; line-height: 1.55; }
+.community-error-details strong { overflow-wrap: anywhere; }
+.community-error-details span { color: #633d43; }
 .form-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; color: #777b88; font-size: 12px; }
 .file-picker { display: inline-flex; min-height: 40px; align-items: center; padding: 0 12px; border: 1px solid #ded8ec; border-radius: 10px; background: #faf8ff; cursor: pointer; }
 .community-form input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
@@ -50,6 +55,10 @@
 .user-post-card > header { display: flex; align-items: center; gap: 12px; }
 .user-post-card > header strong { flex: 1; color: #29283c; }
 .user-post-card time { color: #85899a; font-size: 12px; }
+.guestbook-inline-editor { margin: 14px 0; padding: 14px; border-color: #ebe7f5; background: #faf9fd; box-shadow: none; }
+.guestbook-inline-editor textarea { min-height: 100px; }
+.guestbook-edit-count { justify-self: end; color: #85899a; font-size: 12px; }
+.guestbook-inline-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .user-post-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.72; color: #3d3e4a; }
 .user-photo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .user-photo-item { position: relative; min-width: 0; margin: 0; }
@@ -74,6 +83,14 @@
 .rating-field select { width: auto; min-width: 170px; }
 .review-rating { color: #e49a22; letter-spacing: .08em; }
 .report-card { margin: 14px 0; }
+.moderation-post-card { display: grid; gap: 9px; }
+.moderation-post-card > header { align-items: flex-start; }
+.moderation-notice, .appeal-status { padding: 12px 14px; border: 1px solid #e4d9fa; border-radius: 12px; background: #faf8ff; color: #4c4261; font-size: 13px; line-height: 1.6; }
+.moderation-notice p, .appeal-status p { margin: 3px 0; overflow-wrap: anywhere; }
+.appeal-status { border-color: #d7e9df; background: #f4fbf7; }
+.appeal-form { margin: 8px 0 0; padding: 16px; box-shadow: none; }
+.appeal-form .post-actions { justify-content: flex-end; }
+.appeal-open-button { margin-top: 3px; }
 .report-card blockquote { margin: 12px 0; padding: 12px 14px; border-left: 3px solid #a78bfa; background: #f7f5fc; color: #555267; white-space: pre-wrap; }
 .admin-review-tabs { display: flex; gap: 8px; margin: 24px 0 18px; border-bottom: 1px solid #e5e7ef; }
 .admin-review-tab { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 0 13px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #666b7b; font: inherit; font-weight: 700; cursor: pointer; }
