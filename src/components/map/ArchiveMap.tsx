@@ -427,7 +427,7 @@ function ArchiveMap() {
       className="archive-map"
       onPointerDown={(event) => {
         if ((!locationlessOpen && !archiveDataOpen) || !(event.target instanceof Element)) return
-        if (event.target.closest('#locationless-schedules, #archive-data-panel, .archive-explorer-actions')) return
+        if (event.target.closest('#locationless-schedules, #archive-data-panel, .archive-data-overlay, .archive-explorer-actions')) return
         if (locationlessOpen) {
           setLocationlessOpen(false)
           setLocationlessSelected(undefined)

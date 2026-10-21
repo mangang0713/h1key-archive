@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { locations } from '../../data/locations'
 import { schedules } from '../../data/schedules'
 import { getSongPerformanceNumber, getSongPerformanceStats } from '../../data/songStats'
 import { songs } from '../../data/songs'
 import type { CountryCode, EventFormat, Schedule } from '../../types/archive'
+import ArchiveScheduleFeedback from './ArchiveScheduleFeedback'
 import { renderPhotoGallery } from '../media/photoGallery'
 import { renderXPostEmbeds } from '../media/xPostEmbeds'
 import '../media/XPostEmbeds.css'
@@ -68,6 +70,14 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
     }
   }, [selectedScheduleId, selectedSchedulePhotos])
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
+
   const filteredSchedules = useMemo(() => schedules.filter((schedule) => {
     if (fromDate && schedule.date < fromDate) return false
     if (toDate && schedule.date > toDate) return false
@@ -96,21 +106,54 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
     ? locationsById.get(selectedSchedule.locationId)
     : undefined
 
-  return (
+  return createPortal(
+    <div
+      className="archive-data-overlay"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
     <aside
       ref={panelRef}
       id="archive-data-panel"
       className="archive-data-panel"
-      aria-label="전체 일정 및 곡별 기록"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="archive-data-title"
       tabIndex={-1}
       onKeyDown={(event) => {
-        if (event.key === 'Escape') onClose()
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          onClose()
+          return
+        }
+
+        if (event.key !== 'Tab') return
+        const focusableElements = panelRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )
+        if (!focusableElements?.length) {
+          event.preventDefault()
+          panelRef.current?.focus()
+          return
+        }
+
+        const first = focusableElements[0]
+        const last = focusableElements[focusableElements.length - 1]
+        const activeIndex = Array.from(focusableElements).indexOf(document.activeElement as HTMLElement)
+        if (event.shiftKey && activeIndex <= 0) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && (activeIndex === focusableElements.length - 1 || activeIndex === -1)) {
+          event.preventDefault()
+          first.focus()
+        }
       }}
     >
       <header className="archive-data-header">
         <div>
           <p className="archive-data-eyebrow">H1-KEY ACTIVITY ARCHIVE</p>
-          <h2 ref={headingRef} tabIndex={-1}>{selectedSchedule?.title ?? '기록 찾아보기'}</h2>
+          <h2 id="archive-data-title" ref={headingRef} tabIndex={-1}>{selectedSchedule?.title ?? '기록 찾아보기'}</h2>
         </div>
         <button type="button" className="archive-data-close" aria-label="기록 패널 닫기" onClick={onClose}>×</button>
       </header>
@@ -120,13 +163,21 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
           <button type="button" className="archive-data-back" onClick={() => setSelectedSchedule(undefined)}>
             ← 검색 결과로 돌아가기
           </button>
-          <dl className="archive-data-details">
-            <dt>날짜</dt><dd>{formatDate(selectedSchedule.date)}</dd>
-            <dt>행사 형식</dt><dd>{getFormatLabel(selectedSchedule.eventFormat)}</dd>
-            <dt>장소</dt><dd>{detailLocation?.name ?? (selectedSchedule.eventFormat === 'online' ? '온라인 · 실제 장소 없음' : '장소 미확인')}</dd>
+          <section className="archive-data-event-banner" aria-label="행사 기본 정보">
+            <div className="archive-data-event-date">
+              <span>EVENT DATE</span>
+              <time dateTime={selectedSchedule.date}>{formatDate(selectedSchedule.date)}</time>
+            </div>
+            <div className="archive-data-event-venue">
+              <span className="archive-data-format-chip">{getFormatLabel(selectedSchedule.eventFormat)}</span>
+              <strong>{detailLocation?.name ?? (selectedSchedule.eventFormat === 'online' ? '온라인 · 실제 장소 없음' : '장소 미확인')}</strong>
+            </div>
+          </section>
+          {(detailLocation?.address || selectedSchedule.startTime) && <dl className="archive-data-details">
             {detailLocation?.address && <><dt>주소</dt><dd>{detailLocation.address}</dd></>}
             {selectedSchedule.startTime && <><dt>시작 시간</dt><dd>{selectedSchedule.startTime}</dd></>}
-          </dl>
+          </dl>}
+          <ArchiveScheduleFeedback key={selectedSchedule.id} scheduleId={selectedSchedule.id} />
           {selectedSchedule.eventFormat !== 'online' && selectedSchedule.setlistStatus === 'none' && <p className="archive-data-note">행사에서 진행된 곡이 없습니다.</p>}
           {selectedSchedule.eventFormat !== 'online' && selectedSchedule.setlistStatus !== 'none' && selectedSchedule.setlist.length > 0 && (
             <>
@@ -242,6 +293,8 @@ function ArchiveExplorerPanel({ onClose }: ArchiveExplorerPanelProps) {
         </>
       )}
     </aside>
+    </div>,
+    document.body,
   )
 }
 

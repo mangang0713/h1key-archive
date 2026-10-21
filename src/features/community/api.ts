@@ -119,9 +119,10 @@ export async function getGuestbookPosts(page = 0) {
   return addSignedMedia((data ?? []).map((row: Record<string, unknown>) => ({ ...row, media: (row.media ?? []) as CommunityMedia[] })) as unknown as GuestbookPost[])
 }
 
-export async function getScheduleReviews(scheduleId: string, page = 0) {
+export async function getScheduleReviews(scheduleId: string, page = 0, limit = PAGE_SIZE) {
   const client = requireClient()
-  const { data, error } = await client.rpc('get_public_schedule_reviews', { p_schedule_id: scheduleId, p_offset: page * PAGE_SIZE, p_limit: PAGE_SIZE })
+  const safeLimit = Math.max(1, Math.min(PAGE_SIZE, Math.floor(limit)))
+  const { data, error } = await client.rpc('get_public_schedule_reviews', { p_schedule_id: scheduleId, p_offset: page * safeLimit, p_limit: safeLimit })
   if (error) throw new Error(error.message)
   return addSignedMedia((data ?? []).map((row: Record<string, unknown>) => ({ ...row, media: (row.media ?? []) as CommunityMedia[] })) as unknown as ScheduleReview[])
 }
