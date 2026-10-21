@@ -1,6 +1,6 @@
 # H1-KEY Activity Archive
 
-H1-KEY의 활동 기록을 **지도에서 장소와 날짜를 따라 탐색**할 수 있도록 만드는 인터랙티브 웹 아카이브입니다.
+리이나의 생일을 축하하며 H1-KEY의 활동 기록을 보존하는 팬 아카이브입니다. 첫 화면에서 생일 소개를 보고, 지도에서 장소와 날짜를 따라 활동 기록을 탐색할 수 있습니다.
 
 각 장소의 스케줄과 무대 기록을 연결해, 활동의 발자취를 한눈에 살펴보고 개별 공연의 추억을 다시 확인하는 것을 목표로 합니다.
 
@@ -11,6 +11,8 @@ H1-KEY의 활동 기록을 **지도에서 장소와 날짜를 따라 탐색**할
 - [공개 테스트 사이트](https://mangang0713.github.io/happy-riina-day/) — 링크가 있는 누구나 로그인 없이 접근할 수 있습니다.
 - 현재는 기능 확인을 위한 테스트 배포입니다. 사진과 영상은 X의 외부 리소스를 사용하므로 X의 로딩 정책이나 네트워크 상태에 따라 표시가 달라질 수 있습니다.
 - 정식 운영 전에는 최종 도메인·배포 환경과 미디어 공개 범위 및 권리 확인을 진행합니다.
+
+첫 접속 화면은 사진 자료가 준비되기 전까지 소개용 그래픽과 준비 중 안내를 표시합니다. 지도 탐색은 상단의 **지도** 메뉴 또는 랜딩 화면의 **지금 확인하기**에서 시작합니다.
 
 ## 주요 기능
 
@@ -28,6 +30,10 @@ H1-KEY의 활동 기록을 **지도에서 장소와 날짜를 따라 탐색**할
 - 영상통화 일정 패널은 목록 바깥을 누르면 닫히며, 지도와 별도로 날짜순 기록을 탐색
 - **전체 기록** 패널에서 모든 행사를 날짜·국가·형식·행사명·곡·장소로 검색
 - **곡별 기록**에서 확인 완료·부분 확인 세트리스트로부터 곡이 등장한 일정 수를 자동 계산
+
+### 생일 랜딩 페이지
+- `/`에서 생일 인사, 준비 중인 사진·이야기 소개, 아카이브 이동 버튼을 표시
+- 작은 화면에서는 세로 섹션을 스크롤하며 차례로 확인하고, 동작 줄이기 설정을 존중
 
 ### 스케줄 및 세트리스트
 - 장소별 스케줄 **1건은 상세로 바로 이동**, 여러 건은 날짜별 목록에서 선택
@@ -73,14 +79,16 @@ npm run preview
 src/
 ├─ App.tsx                      # 해시 경로에 따라 페이지 선택
 ├─ pages/
+│  ├─ LandingPage.tsx            # 첫 접속 생일 소개 화면
 │  ├─ ArchivePage.tsx            # 지도 중심 메인 페이지
-│  ├─ GuestbookPage.tsx          # 축하 방명록
+│  ├─ GuestbookPage.tsx          # 방명록 목록과 페이지 상태 조율
 │  ├─ SchedulePage.tsx           # 일정 좋아요·후기·사진
 │  ├─ AccountPage.tsx             # 소셜 로그인·프로필·탈퇴
 │  ├─ AdminReportsPage.tsx        # 신고 검토와 숨김 게시물 복원
 │  └─ AdminSettingsPage.tsx       # 사용자 기능·사진 중단 스위치
 ├─ components/
 │  ├─ layout/                     # 공유 상단 메뉴와 페이지 틀
+│  ├─ community/                  # 방명록 작성 폼과 신고 대화상자
 │  ├─ map/
 │  │  ├─ ArchiveMap.tsx                  # 지도 생명주기·카메라·기능 조율
 │  │  ├─ ArchiveMap.css                  # 지도 컨테이너·마커·처음으로 버튼 스타일
@@ -115,12 +123,15 @@ src/
 └─ lib/supabase/                  # 브라우저용 Supabase 연결
 supabase/
 ├─ migrations/                   # 사용자 콘텐츠 스키마와 접근 정책
-└─ functions/community-api/       # 권한·요청 제한·사진 검증을 하는 서버 기능
+└─ functions/community-api/
+   ├─ index.ts                    # Edge Function 진입점과 요청별 흐름 조율
+   ├─ media.ts                    # 사진 업로드·열람·삭제 처리
+   └─ moderation.ts               # 숨김 콘텐츠 보존·이의제기·만료 정리
 ```
 
-GitHub Pages의 저장소 하위 경로와 새로고침을 지원하도록 `HashRouter`를 사용합니다. 지도는 첫 페이지이자 메인 탐색 화면으로 유지하고, 커뮤니티 페이지 코드는 방문할 때 불러오도록 나눴습니다.
+GitHub Pages에서 새로고침해도 경로를 처리하도록 `HashRouter`를 사용합니다. `/`는 생일 랜딩 페이지, `/archive`는 지도 아카이브이며 각 페이지 코드는 필요한 때 불러옵니다.
 
-지도 생명주기와 카메라 흐름은 `ArchiveMap.tsx`에서 조율하고, 탐색 메뉴 UI는 `ArchiveExplorerControls.tsx`, 시간순 탐방 동작은 `timeTravelController.ts`, 장소 이동은 `regionNavigationController.ts`가 맡습니다. Popup 콘텐츠와 탐색 UI의 스타일은 각각 해당 컴포넌트 파일 옆에 둡니다. `schedules.ts`, `locations.ts`, `schedulePhotos.ts`는 길지만 각각 원본 데이터 목록이라 한 파일에서 계속 편집할 수 있도록 유지합니다.
+지도 생명주기와 카메라 흐름은 `ArchiveMap.tsx`에서 조율하고, 탐색 메뉴 UI는 `ArchiveExplorerControls.tsx`, 시간순 탐방 동작은 `timeTravelController.ts`, 장소 이동은 `regionNavigationController.ts`가 맡습니다. 방명록 페이지는 목록과 사용자 권한 상태를 연결하고, 작성 폼과 신고 대화상자는 별도 컴포넌트가 담당합니다. Edge Function은 진입점, 사진 처리, 운영자 조정·만료 정리로 나눴습니다. Popup 콘텐츠와 탐색 UI의 스타일은 각각 해당 컴포넌트 파일 옆에 둡니다. `schedules.ts`, `locations.ts`, `schedulePhotos.ts`는 길지만 각각 원본 데이터 목록이라 가져오기 도구 호환성을 위해 한 파일에서 계속 편집할 수 있도록 유지합니다.
 
 장소와 스케줄은 **1:N 관계**로 관리하며, 세트리스트에는 곡 제목 대신 곡 ID를 저장합니다.
 
@@ -159,7 +170,7 @@ CSV 가져오기는 확인 완료된 새 장소를 `locations.ts`에 추가하�
 
 ## 추가 페이지와 Supabase
 
-지도는 첫 화면이자 아카이브의 중심입니다. 여기에 방명록, 일정 좋아요·후기, 계정, 신고 검토, 운영 설정 페이지를 더해 이후 기능을 별도 화면으로 확장할 수 있는 구조를 마련했습니다.
+생일 랜딩 화면에서 축하의 맥락을 소개하고, 지도는 아카이브의 중심 탐색 화면으로 제공합니다. 방명록, 일정 좋아요·후기, 계정, 신고 검토, 운영 설정은 별도 페이지로 연결해 기능을 확장할 수 있습니다.
 
 Supabase 프로젝트에 DB 마이그레이션과 `community-api` Edge Function을 적용했고, Cloudflare Turnstile도 연결했습니다. GitHub Pages 빌드는 저장소 Actions 변수 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY`를 사용합니다. URL, publishable key, Turnstile site key는 브라우저에서 사용되는 공개 설정값이며, service-role key와 Turnstile secret key는 서버에만 둡니다. 2026-10-21에는 공개 배포본에서 방명록 조회와 게시된 글 표시를 확인했습니다. 배포본의 로그인·작성·수정·삭제·신고와 관리자 권한은 출시 전 다시 점검해야 합니다. 설정이나 커뮤니티 기능에 문제가 있어도 지도와 정적 일정 데이터는 계속 작동합니다.
 
@@ -169,6 +180,7 @@ Supabase 프로젝트에 DB 마이그레이션과 `community-api` Edge Function�
 
 ## 개발 현황
 
+- [x] 생일 랜딩 페이지와 지도 아카이브(`/archive`) 경로 분리
 - [x] 대한민국 2D 지도 및 기본 카메라 제어
 - [x] 장소 마커와 클러스터링
 - [x] 동일 장소의 복수 스케줄 목록

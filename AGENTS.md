@@ -12,13 +12,17 @@
 - 기존 파일과 구조를 활용하며 필요한 부분만 수정한다. 백엔드, 데이터베이스, 상태관리 라이브러리, 불필요한 추상화나 폴더는 요구가 확인되기 전 도입하지 않는다.
 - 기존 Supabase 사용자 기능을 충분히 구현하고 안정화·QA하기 전에는 자체 백엔드 개발이나 이전을 시작하지 않는다. 자체 백엔드는 그 이후 별도 단계에서 검토한다.
 - `src/App.tsx`: 해시 경로와 페이지 컴포넌트를 연결한다. 새 페이지는 실제 기능이 정해진 뒤 경로 목록에 등록한다.
-- `src/pages/ArchivePage.tsx`: 지도 중심 메인 페이지를 조립한다. 추가 페이지는 기능 범위가 정해진 뒤 `src/pages/`에 둔다.
+- `src/pages/LandingPage.tsx`: `/` 첫 화면의 생일 소개를 담당한다. 사진 자료가 들어오기 전까지 안내용 자리 표시를 사용한다.
+- `src/pages/ArchivePage.tsx`: `/archive`의 지도 중심 탐색 페이지를 조립한다. 추가 페이지는 기능 범위가 정해진 뒤 `src/pages/`에 둔다.
+- `src/pages/GuestbookPage.tsx`: 방명록 목록과 사용자·관리자 상태를 조율한다. 작성 폼과 신고 대화상자는 `src/components/community/`에 둔다.
 - `src/components/map/ArchiveMap.tsx`: MapLibre 지도 생명주기와 마커·카메라·Popup 기능을 연결하는 중심 컴포넌트.
 - `src/components/map/timeTravelController.ts`: 시간순 카메라 이동, 도착 마커와 애니메이션 정리.
 - `src/components/map/regionNavigationController.ts`: 현재 이동을 취소하고 목표 지역으로 축소·이동·확대하는 카메라 흐름.
 - `src/components/map/TimeTravelPanel.tsx`, `RegionNavigationPanel.tsx`: 시간순 탐방과 지역 선택 UI.
 - `src/components/map/createLocationMarkerElement.ts`: 지도 클러스터·장소 마커 DOM 생성.
 - `src/components/map/SchedulePopupContent.ts`: 스케줄 목록·상세 DOM 생성. 지도와 카메라는 관리하지 않는다.
+- `src/components/community/GuestbookComposer.tsx`, `GuestbookReportDialog.tsx`: 방명록 작성·사진 업로드 폼과 신고 대화상자 UI.
+- `supabase/functions/community-api/index.ts`: Edge Function 진입점과 요청 흐름 조율. 사진 처리는 `media.ts`, 숨김 콘텐츠 관리와 만료 정리는 `moderation.ts`에 둔다.
 - `src/data/{locations,schedules,songs}.ts`: 원본 데이터. `src/types/archive.ts`: 공통 타입.
 - 기존 DOM Popup 방식을 유지하며 분리는 실제 책임이 커질 때만 수행한다.
 
