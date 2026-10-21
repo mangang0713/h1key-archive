@@ -2,6 +2,11 @@
   width: 100%;
   height: 100vh;
   height: 100dvh;
+  transition: opacity 220ms ease-in-out;
+}
+
+.map-container.journey-preparing {
+  opacity: 0;
 }
 
 .journey-location-marker {
@@ -84,6 +89,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .map-container {
+    transition: none;
+  }
+
   .journey-location-marker {
     animation: none;
   }

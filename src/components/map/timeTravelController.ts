@@ -6,6 +6,8 @@ import { locationsById, nearestRegionCode } from './archiveMapData'
 const JOURNEY_CAMERA_DURATION = 1500
 const JOURNEY_STOP_DELAY = 1800
 const JOURNEY_TILE_WAIT_MAX = 1500
+const JOURNEY_START_FADE_DURATION = 220
+const JOURNEY_START_ZOOM = 12
 const JOURNEY_MIN_ZOOM = 7.5
 const JOURNEY_MAX_ZOOM = 13
 const JOURNEY_START_DATE = '2026-02-21'
@@ -80,6 +82,22 @@ export function createTimeTravelController({
   let cameraRequest = 0
   let journeyTileWaitTimeout: number | undefined
   let journeyIdleHandler: (() => void) | undefined
+  let journeyPreparationTimeout: number | undefined
+  let journeyPreparationIdleHandler: (() => void) | undefined
+  const clearJourneyPreparationWait = () => {
+    if (journeyPreparationTimeout !== undefined) {
+      window.clearTimeout(journeyPreparationTimeout)
+      journeyPreparationTimeout = undefined
+    }
+    if (journeyPreparationIdleHandler) {
+      map.off('idle', journeyPreparationIdleHandler)
+      journeyPreparationIdleHandler = undefined
+    }
+  }
+  const cancelJourneyPreparation = () => {
+    clearJourneyPreparationWait()
+    map.getContainer().classList.remove('journey-preparing')
+  }
   const cancelJourneyTileWait = () => {
     if (journeyTileWaitTimeout !== undefined) {
       window.clearTimeout(journeyTileWaitTimeout)
@@ -133,6 +151,7 @@ export function createTimeTravelController({
   const stop = (restoreCamera: boolean) => {
     const previous = timeTravelCamera
     timeTravelCamera = undefined
+    cancelJourneyPreparation()
     cancelJourneyTileWait()
     if (previous) {
       cameraRequest++
@@ -156,9 +175,12 @@ export function createTimeTravelController({
     if (timeTravelSchedules.length === 0 || disposed) return
     cameraRequest++
     invalidateOtherCameraTransitions()
+    const request = cameraRequest
+    cancelJourneyPreparation()
     cancelJourneyTileWait()
     map.stop()
     discardSelection()
+    clearJourneyLocation()
     timeTravelCamera = {
       center: [map.getCenter().lng, map.getCenter().lat],
       zoom: map.getZoom(),
@@ -168,11 +190,43 @@ export function createTimeTravelController({
     clearVisibleLocationMarkers()
     map.triggerRepaint()
     onStart()
-    setIndex(0)
+    setIndex(null)
     setMoving(false)
     setPausedOnRoute(false)
-    setPlaying(true)
-    setOpen(true)
+    setPlaying(false)
+    setOpen(false)
+
+    const firstSchedule = timeTravelSchedules[0]
+    const firstLocation = firstSchedule.locationId ? locationsById.get(firstSchedule.locationId) : undefined
+    const targetCoordinates = firstLocation?.coordinates ?? [map.getCenter().lng, map.getCenter().lat] as [number, number]
+    const container = map.getContainer()
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const transitionDuration = reducedMotion ? 0 : JOURNEY_START_FADE_DURATION
+    container.classList.add('journey-preparing')
+
+    const beginJourney = () => {
+      if (disposed || request !== cameraRequest) return
+      const revealMap = () => {
+        if (disposed || request !== cameraRequest) return
+        clearJourneyPreparationWait()
+        container.classList.remove('journey-preparing')
+        journeyPreparationTimeout = window.setTimeout(() => {
+          journeyPreparationTimeout = undefined
+          if (disposed || request !== cameraRequest) return
+          lastJourneyCoordinates = targetCoordinates
+          if (firstLocation) setCurrentRegionCode(nearestRegionCode(firstLocation.coordinates))
+          setIndex(0)
+          setOpen(true)
+          setPlaying(true)
+        }, transitionDuration + 40)
+      }
+      journeyPreparationIdleHandler = revealMap
+      map.on('idle', revealMap)
+      map.jumpTo({ center: targetCoordinates, zoom: JOURNEY_START_ZOOM, bearing: 0, pitch: 0 })
+      journeyPreparationTimeout = window.setTimeout(revealMap, JOURNEY_TILE_WAIT_MAX)
+    }
+
+    journeyPreparationTimeout = window.setTimeout(beginJourney, transitionDuration)
   }
 
   const focus = (schedule: Schedule) => {
@@ -295,6 +349,7 @@ export function createTimeTravelController({
       disposed = true
       timeTravelCamera = undefined
       cameraRequest++
+      cancelJourneyPreparation()
       cancelJourneyTileWait()
       if (journeyAnimationFrame !== undefined) window.cancelAnimationFrame(journeyAnimationFrame)
       journeyAnimationFrame = undefined
