@@ -80,7 +80,7 @@ npm run preview
 
 ```text
 src/
-├─ App.tsx                      # 해시 경로에 따라 페이지 선택
+├─ App.tsx                      # 브라우저 경로에 따라 페이지 선택
 ├─ pages/
 │  ├─ LandingPage.tsx            # 첫 접속 생일 소개 화면
 │  ├─ ArchivePage.tsx            # 지도 중심 메인 페이지
@@ -94,13 +94,13 @@ src/
 │  ├─ community/                  # 방명록 작성 폼과 신고 대화상자
 │  ├─ map/
 │  │  ├─ ArchiveMap.tsx                  # 지도 생명주기·카메라·기능 조율
-│  │  ├─ ArchiveMap.css                  # 지도 컨테이너·마커·처음으로 버튼 스타일
+│  │  ├─ ArchiveMap.css                  # 지도 컨테이너·시간순 이동 마커·처음으로 버튼 스타일
 │  │  ├─ ArchiveExplorerControls.tsx     # 지도 탐색 버튼과 지역·영상통화·전체 기록 패널 연결
 │  │  ├─ ArchiveExplorerControls.css    # 지도 탐색 컨트롤 스타일
 │  │  ├─ TimeTravelPanel.tsx             # 시간순 탐방 조작 UI
 │  │  ├─ TimeTravelPanel.css              # 시간순 탐방 UI 스타일
 │  │  ├─ RegionNavigationPanel.tsx       # 지역 선택 UI
-│  │  ├─ createLocationMarkerElement.ts  # 클러스터·장소 마커 UI 생성
+│  │  ├─ locationMarkerLayers.ts         # MapLibre 클러스터·장소 핀 레이어와 확대 단계별 크기
 │  │  ├─ timeTravelController.ts        # 시간순 이동과 도착 마커
 │  │  ├─ regionNavigationController.ts  # 지역 간 카메라 이동
 │  │  ├─ archiveMapData.ts               # 지도에 필요한 장소·일정 데이터 계산
@@ -132,9 +132,9 @@ supabase/
    └─ moderation.ts               # 숨김 콘텐츠 보존·이의제기·만료 정리
 ```
 
-GitHub Pages에서 새로고침해도 경로를 처리하도록 `HashRouter`를 사용합니다. `/`는 생일 랜딩 페이지, `/archive`는 지도 아카이브이며 각 페이지 코드는 필요한 때 불러옵니다.
+브라우저 경로 라우팅을 사용합니다. `/`는 생일 랜딩 페이지, `/archive`는 지도 아카이브이며 각 페이지 코드는 필요한 때 불러옵니다. GitHub Pages의 하위 경로 직접 접속과 새로고침은 `404.html`에서 앱 경로를 복원해 처리합니다. 기존 `#/...` 링크도 열면 새 경로로 정리됩니다. 지도 클러스터와 장소 마커는 MapLibre 레이어로 렌더링해 지도 확대·이동과 같은 프레임에서 위치와 크기가 바뀌도록 합니다.
 
-지도 생명주기와 카메라 흐름은 `ArchiveMap.tsx`에서 조율하고, 탐색 메뉴 UI는 `ArchiveExplorerControls.tsx`, 시간순 탐방 동작은 `timeTravelController.ts`, 장소 이동은 `regionNavigationController.ts`가 맡습니다. 방명록 페이지는 목록과 사용자 권한 상태를 연결하고, 작성 폼과 신고 대화상자는 별도 컴포넌트가 담당합니다. Edge Function은 진입점, 사진 처리, 운영자 조정·만료 정리로 나눴습니다. Popup 콘텐츠와 탐색 UI의 스타일은 각각 해당 컴포넌트 파일 옆에 둡니다. `schedules.ts`, `locations.ts`, `schedulePhotos.ts`는 길지만 각각 원본 데이터 목록이라 가져오기 도구 호환성을 위해 한 파일에서 계속 편집할 수 있도록 유지합니다.
+지도 생명주기와 카메라 흐름은 `ArchiveMap.tsx`에서 조율하고, 마커 레이어 정의는 `locationMarkerLayers.ts`, 지도용 데이터 계산은 `archiveMapData.ts`, 탐색 메뉴 UI는 `ArchiveExplorerControls.tsx`, 시간순 탐방 동작은 `timeTravelController.ts`, 장소 이동은 `regionNavigationController.ts`가 맡습니다. 방명록 페이지는 목록과 사용자 권한 상태를 연결하고, 작성 폼과 신고 대화상자는 별도 컴포넌트가 담당합니다. Edge Function은 진입점, 사진 처리, 운영자 조정·만료 정리로 나눴습니다. Popup 콘텐츠와 탐색 UI의 스타일은 각각 해당 컴포넌트 파일 옆에 둡니다. `schedules.ts`, `locations.ts`, `schedulePhotos.ts`는 길지만 각각 원본 데이터 목록이라 가져오기 도구 호환성을 위해 한 파일에서 계속 편집할 수 있도록 유지합니다.
 
 장소와 스케줄은 **1:N 관계**로 관리하며, 세트리스트에는 곡 제목 대신 곡 ID를 저장합니다.
 
