@@ -19,6 +19,7 @@ import {
   removeStorageObjectsForContent,
   safeSecretEquals,
 } from './moderation.ts';
+import { createHttpHelpers, getBearer, text } from './http.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -34,6 +35,7 @@ const allowedOrigins = new Set(
     .map((value) => value.trim())
     .filter(Boolean),
 );
+const { corsHeaders, respond } = createHttpHelpers(allowedOrigins);
 
 const admin =
   supabaseUrl && serviceRoleKey
@@ -41,34 +43,6 @@ const admin =
         auth: { autoRefreshToken: false, persistSession: false },
       })
     : null;
-
-/** 브라우저가 허용된 로컬·배포 출처에서만 API 응답을 읽도록 CORS를 설정합니다. */
-function corsHeaders(origin: string | null) {
-  const headers = new Headers({
-    'Access-Control-Allow-Headers':
-      'authorization, apikey, content-type, x-client-info, x-community-purge-secret',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    Vary: 'Origin',
-  });
-  if (origin && allowedOrigins.has(origin)) {
-    headers.set('Access-Control-Allow-Origin', origin);
-  }
-  return headers;
-}
-
-/** 개인정보 응답을 캐시에 남기지 않고 JSON과 요청별 상태 코드로 반환합니다. */
-function respond(body: unknown, status = 200, origin: string | null = null) {
-  const headers = corsHeaders(origin);
-  headers.set('Content-Type', 'application/json; charset=utf-8');
-  headers.set('Cache-Control', 'no-store');
-  return new Response(JSON.stringify(body), { status, headers });
-}
-
-/** Authorization 헤더에서 Supabase 로그인 토큰만 꺼냅니다. */
-function getBearer(request: Request) {
-  const value = request.headers.get('Authorization') ?? '';
-  return value.startsWith('Bearer ') ? value.slice(7) : '';
-}
 
 /** 로그인 토큰을 Supabase에서 검증하고 사용자용·서버용 클라이언트를 제공합니다. */
 async function requireUser(request: Request) {
@@ -236,18 +210,6 @@ async function isAdmin(client: SupabaseClient, userId: string) {
   });
   if (error) throw new Error('관리자 권한을 확인하지 못했습니다.');
   return data === true;
-}
-
-/** 글과 사유 입력을 검증하고 서버 기준 길이 제한을 적용합니다. */
-function text(value: unknown, max: number) {
-  if (typeof value !== 'string') {
-    throw new Error('입력 내용이 올바르지 않습니다.');
-  }
-  const result = value.trim();
-  if (result.length < 1 || result.length > max) {
-    throw new Error(`입력은 1~${max}자여야 합니다.`);
-  }
-  return result;
 }
 
 // action별 요청을 인증·검증한 뒤 방명록, 후기, 신고, 운영 기능으로 전달합니다.

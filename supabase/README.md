@@ -29,11 +29,12 @@ Supabase 프로젝트의 커뮤니티 DB 마이그레이션과 `community-api` E
 
 ## Edge Function 구조와 현재 점검
 
-- `functions/community-api/index.ts`는 CORS 응답, Bearer 토큰 확인, 요청 제한·약관·관리자 권한 확인과 방명록·후기·신고·이의제기·계정 요청 분기를 조율합니다. `verify_jwt = false`여도 일반 사용자 요청은 함수 내부에서 `auth.getUser(token)`으로 검증됩니다. CORS는 브라우저 응답을 제한하는 설정이며 API 인증을 대신하지 않습니다.
+- `functions/community-api/index.ts`는 요청 인증, 제한·약관·관리자 권한 확인과 방명록·후기·신고·이의제기·계정 요청 분기를 조율합니다. `verify_jwt = false`여도 일반 사용자 요청은 함수 내부에서 `auth.getUser(token)`으로 검증됩니다.
+- `functions/community-api/http.ts`는 CORS 헤더, JSON 응답, Bearer 토큰 읽기와 문자열 입력 검증을 제공합니다. CORS는 브라우저 응답을 제한하는 설정이며 API 인증을 대신하지 않습니다. `http_test.ts`는 이 공통 도구의 동작을 Deno로 검사합니다.
 - `functions/community-api/media.ts`는 비공개 Storage 업로드, 파일 검증, 사용량 예약·정산, 제한 시간 URL과 사진 삭제를 처리합니다.
 - `functions/community-api/moderation.ts`는 숨김 콘텐츠, 이의제기 정보 연결, 만료 시 콘텐츠·파일 정리를 처리합니다.
 - SQL은 RLS로 직접 테이블 접근을 제한하고, 공개 조회와 일부 작업은 권한이 제한된 `SECURITY DEFINER` 함수로 제공합니다. `service_role` 키는 Edge Function 안에서만 사용해야 합니다.
-- 현재 확인된 개선 후보는 `index.ts`의 요청 분기가 여러 커뮤니티 기능을 한 파일에 모으고, 예외 응답이 기본적으로 HTTP 400으로 반환되는 점입니다. 다음 작업은 요청 검증·오류 응답을 기능별 핸들러로 정리하고, 각 액션의 인증·권한·DB 변경 경계를 확인하는 것입니다. 이 점검에서는 자체 서버 이전, DB 변경 또는 배포를 하지 않습니다.
+- 현재 확인된 개선 후보는 `index.ts`의 요청 분기가 여러 커뮤니티 기능을 한 파일에 모으고, 예외 응답이 기본적으로 HTTP 400으로 반환되는 점입니다. 첫 코드 정리로 공통 HTTP 도구를 `http.ts`에 분리하고 응답·CORS·입력 검증 테스트 4개를 추가했다. 이 변경은 DB 스키마를 수정하지 않으며, 2026-10-22에 `community-api` version 9로 배포했다. CLI 원격 마이그레이션 목록에는 `202610220001`만 기록되고 이전 8개 로컬 마이그레이션은 원격 기록에서 확인되지 않았다. 원격 DB 구조와 SQL Editor 실행 이력을 대조하기 전까지 이 차이를 `db push`나 migration repair로 정리하지 않는다. 다음 작업은 오류 응답을 유형화하고 액션별 인증·권한·DB 변경 경계를 검사한 뒤 요청 분기를 책임별 핸들러로 나누는 것입니다. 자체 백엔드 이전은 시작하지 않는다.
 - `verifyTurnstile`은 현재 `TURNSTILE_SECRET_KEY`가 없으면 검증을 건너뜁니다(fail-open). 운영 환경에 secret이 설정돼 있는지 확인하고, 누락 시 쓰기 요청을 차단하도록 바꿀지는 별도 보안 개선으로 시험해야 합니다.
 
 ## 한도와 운영

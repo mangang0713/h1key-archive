@@ -132,9 +132,12 @@ src/
 │  └─ community/                  # 방명록·좋아요·후기 데이터 요청
 └─ lib/supabase/                  # 브라우저용 Supabase 연결
 supabase/
+├─ README.md                     # Supabase 설정·운영 절차
 ├─ migrations/                   # 사용자 콘텐츠 스키마와 접근 정책
 └─ functions/community-api/
    ├─ index.ts                    # Edge Function 진입점과 요청별 흐름 조율
+   ├─ http.ts                     # CORS, JSON 응답, Bearer 토큰과 입력 문자열 도구
+   ├─ http_test.ts                # 공유 HTTP 도구의 Deno 단위 테스트
    ├─ media.ts                    # 사진 업로드·열람·삭제 처리
    └─ moderation.ts               # 숨김 콘텐츠 보존·이의제기·만료 정리
 public/media/official/             # 공식 계정 사진 파일(행사 날짜/분류별 보관)
@@ -142,7 +145,7 @@ public/media/official/             # 공식 계정 사진 파일(행사 날짜/�
 
 브라우저 경로 라우팅을 사용합니다. `/`는 생일 랜딩 페이지, `/archive`는 지도 아카이브이며 각 페이지 코드는 필요한 때 불러옵니다. GitHub Pages의 하위 경로 직접 접속과 새로고침은 `404.html`에서 앱 경로를 복원해 처리합니다. 기존 `#/...` 링크도 열면 새 경로로 정리됩니다. 지도 클러스터와 장소 마커는 MapLibre 레이어로 렌더링해 지도 확대·이동과 같은 프레임에서 위치와 크기가 바뀌도록 합니다.
 
-지도 생명주기와 카메라 흐름은 `ArchiveMap.tsx`에서 조율하고, 마커 레이어 정의는 `locationMarkerLayers.ts`, 지도용 데이터 계산은 `archiveMapData.ts`, 탐색 메뉴 UI는 `ArchiveExplorerControls.tsx`, 시간순 탐방 동작은 `timeTravelController.ts`, 장소 이동은 `regionNavigationController.ts`가 맡습니다. 방명록 페이지는 목록과 사용자 권한 상태를 연결하고, 작성 폼과 신고 대화상자는 별도 컴포넌트가 담당합니다. Edge Function은 진입점, 사진 처리, 운영자 조정·만료 정리로 나눴습니다. Popup 콘텐츠와 탐색 UI의 스타일은 각각 해당 컴포넌트 파일 옆에 둡니다. `schedules.ts`, `locations.ts`, `schedulePhotos.ts`는 길지만 각각 원본 데이터 목록이라 가져오기 도구 호환성을 위해 한 파일에서 계속 편집할 수 있도록 유지합니다.
+지도 생명주기와 카메라 흐름은 `ArchiveMap.tsx`에서 조율하고, 마커 레이어 정의는 `locationMarkerLayers.ts`, 지도용 데이터 계산은 `archiveMapData.ts`, 탐색 메뉴 UI는 `ArchiveExplorerControls.tsx`, 시간순 탐방 동작은 `timeTravelController.ts`, 장소 이동은 `regionNavigationController.ts`가 맡습니다. 방명록 페이지는 목록과 사용자 권한 상태를 연결하고, 작성 폼과 신고 대화상자는 별도 컴포넌트가 담당합니다. Edge Function은 요청 진입점과 공통 HTTP 도구, 사진 처리, 운영자 조정·만료 정리로 나눴습니다. 공통 HTTP 도구는 Deno 단위 테스트로 검사합니다. Popup 콘텐츠와 탐색 UI의 스타일은 각각 해당 컴포넌트 파일 옆에 둡니다. `schedules.ts`, `locations.ts`, `schedulePhotos.ts`는 길지만 각각 원본 데이터 목록이라 가져오기 도구 호환성을 위해 한 파일에서 계속 편집할 수 있도록 유지합니다.
 
 장소와 스케줄은 **1:N 관계**로 관리하며, 세트리스트에는 곡 제목 대신 곡 ID를 저장합니다.
 
