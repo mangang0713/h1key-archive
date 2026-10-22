@@ -1,3 +1,7 @@
+/**
+ * 이 스타일은 시간순 여정 컨트롤과 현재 일정 표시의 화면 배치를 관리합니다.
+ */
+
 .time-travel-panel {
   position: absolute;
   z-index: 6;

@@ -1,3 +1,5 @@
+-- 방명록·후기·좋아요·사진·신고와 RLS 정책 등 커뮤니티의 초기 데이터 구조를 설정합니다.
+
 create extension if not exists pgcrypto;
 
 create table public.profiles (

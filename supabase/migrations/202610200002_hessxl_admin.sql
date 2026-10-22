@@ -1,3 +1,5 @@
+-- 지정된 운영자 계정의 관리자 권한 확인 기준과 관련 데이터베이스 보호 정책을 설정합니다.
+
 create or replace function public.claim_hessxl_admin()
 returns boolean
 language plpgsql

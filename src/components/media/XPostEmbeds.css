@@ -1,3 +1,7 @@
+/**
+ * 이 스타일은 X 게시물 임베드 영역의 크기와 로딩 중 표시를 관리합니다.
+ */
+
 .x-post-embeds {
   min-width: 0;
   margin: 16px 0;
@@ -29,7 +33,9 @@
 }
 
 @keyframes x-embed-spinner {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .x-post-embeds blockquote {

@@ -1,35 +1,42 @@
-import type { Ref } from 'react'
-import type { Schedule, CountryCode } from '../../types/archive'
-import ArchiveExplorerPanel from '../archive/ArchiveExplorerPanel'
-import LocationlessSchedulePanel from '../schedule/LocationlessSchedulePanel'
-import RegionNavigationPanel, { type RegionNavigationOption } from './RegionNavigationPanel'
-import './ArchiveExplorerControls.css'
+/**
+ * 이 컨트롤은 전체 기록, 시간순 여정, 해외 지역 이동을 지도 화면에서 시작하게 합니다.
+ */
+
+import type { Ref } from 'react';
+import type { Schedule, CountryCode } from '../../types/archive';
+import ArchiveExplorerPanel from '../archive/ArchiveExplorerPanel';
+import LocationlessSchedulePanel from '../schedule/LocationlessSchedulePanel';
+import RegionNavigationPanel, {
+  type RegionNavigationOption,
+} from './RegionNavigationPanel';
+import './ArchiveExplorerControls.css';
 
 type ArchiveExplorerControlsProps = {
-  regions: RegionNavigationOption[]
-  videoCallSchedules: Schedule[]
-  scheduleCount: number
-  timeTravelCount: number
-  regionNavigationOpen: boolean
-  locationlessOpen: boolean
-  locationlessSelected?: Schedule
-  archiveDataOpen: boolean
-  timeTravelButtonRef: Ref<HTMLButtonElement>
-  regionNavigationButtonRef: Ref<HTMLButtonElement>
-  locationlessButtonRef: Ref<HTMLButtonElement>
-  archiveDataButtonRef: Ref<HTMLButtonElement>
-  onStartTimeTravel: () => void
-  onToggleRegionNavigation: () => void
-  onCloseRegionNavigation: () => void
-  onSelectRegion: (countryCode: CountryCode) => void
-  onToggleLocationless: () => void
-  onSelectLocationlessSchedule: (schedule: Schedule) => void
-  onBackLocationless: () => void
-  onCloseLocationless: () => void
-  onToggleArchiveData: () => void
-  onCloseArchiveData: () => void
-}
+  regions: RegionNavigationOption[];
+  videoCallSchedules: Schedule[];
+  scheduleCount: number;
+  timeTravelCount: number;
+  regionNavigationOpen: boolean;
+  locationlessOpen: boolean;
+  locationlessSelected?: Schedule;
+  archiveDataOpen: boolean;
+  timeTravelButtonRef: Ref<HTMLButtonElement>;
+  regionNavigationButtonRef: Ref<HTMLButtonElement>;
+  locationlessButtonRef: Ref<HTMLButtonElement>;
+  archiveDataButtonRef: Ref<HTMLButtonElement>;
+  onStartTimeTravel: () => void;
+  onToggleRegionNavigation: () => void;
+  onCloseRegionNavigation: () => void;
+  onSelectRegion: (countryCode: CountryCode) => void;
+  onToggleLocationless: () => void;
+  onSelectLocationlessSchedule: (schedule: Schedule) => void;
+  onBackLocationless: () => void;
+  onCloseLocationless: () => void;
+  onToggleArchiveData: () => void;
+  onCloseArchiveData: () => void;
+};
 
+/** 지도에서 전체 기록·여정 재생·지역 이동을 시작하는 공통 컨트롤입니다. */
 function ArchiveExplorerControls({
   regions,
   videoCallSchedules,
@@ -54,16 +61,33 @@ function ArchiveExplorerControls({
   onToggleArchiveData,
   onCloseArchiveData,
 }: ArchiveExplorerControlsProps) {
-  if (regions.length === 0 && videoCallSchedules.length === 0 && scheduleCount === 0) return null
+  if (
+    regions.length === 0 &&
+    videoCallSchedules.length === 0 &&
+    scheduleCount === 0
+  ) {
+    return null;
+  }
 
   return (
     <section className="archive-explorer" aria-label="아카이브 탐색">
       <h2 className="archive-explorer-title">아카이브 탐색</h2>
       <div className="archive-explorer-actions">
         {timeTravelCount > 0 && (
-          <button ref={timeTravelButtonRef} type="button" className="archive-explorer-action" onClick={onStartTimeTravel}>
-            <span className="archive-explorer-icon archive-explorer-icon-time" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2M4 5v5h5" /></svg>
+          <button
+            ref={timeTravelButtonRef}
+            type="button"
+            className="archive-explorer-action"
+            onClick={onStartTimeTravel}
+          >
+            <span
+              className="archive-explorer-icon archive-explorer-icon-time"
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2M4 5v5h5" />
+              </svg>
             </span>
             <span className="archive-explorer-label">활동 여정 보기</span>
             <span className="archive-explorer-count">{timeTravelCount}건</span>
@@ -78,8 +102,14 @@ function ArchiveExplorerControls({
             aria-controls="region-navigation-panel"
             onClick={onToggleRegionNavigation}
           >
-            <span className="archive-explorer-icon archive-explorer-icon-region" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>
+            <span
+              className="archive-explorer-icon archive-explorer-icon-region"
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
+              </svg>
             </span>
             <span className="archive-explorer-label">지역 이동</span>
             <span className="archive-explorer-count">{regions.length}개국</span>
@@ -95,11 +125,19 @@ function ArchiveExplorerControls({
             aria-controls="locationless-schedules"
             onClick={onToggleLocationless}
           >
-            <span className="archive-explorer-icon archive-explorer-icon-video" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="3" /><path d="m15 10 6-3v10l-6-3" /></svg>
+            <span
+              className="archive-explorer-icon archive-explorer-icon-video"
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="6" width="12" height="12" rx="3" />
+                <path d="m15 10 6-3v10l-6-3" />
+              </svg>
             </span>
             <span className="archive-explorer-label">영상통화</span>
-            <span className="archive-explorer-count">{videoCallSchedules.length}건</span>
+            <span className="archive-explorer-count">
+              {videoCallSchedules.length}건
+            </span>
           </button>
         )}
         <button
@@ -111,14 +149,28 @@ function ArchiveExplorerControls({
           aria-controls="archive-data-panel"
           onClick={onToggleArchiveData}
         >
-          <span className="archive-explorer-icon archive-explorer-icon-data" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16" /><circle cx="8" cy="5" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="10" cy="19" r="1" /></svg>
+          <span
+            className="archive-explorer-icon archive-explorer-icon-data"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M4 5h16M4 12h16M4 19h16" />
+              <circle cx="8" cy="5" r="1" />
+              <circle cx="15" cy="12" r="1" />
+              <circle cx="10" cy="19" r="1" />
+            </svg>
           </span>
           <span className="archive-explorer-label">전체 기록</span>
           <span className="archive-explorer-count">{scheduleCount}건</span>
         </button>
       </div>
-      {regionNavigationOpen && <RegionNavigationPanel regions={regions} onClose={onCloseRegionNavigation} onSelect={onSelectRegion} />}
+      {regionNavigationOpen && (
+        <RegionNavigationPanel
+          regions={regions}
+          onClose={onCloseRegionNavigation}
+          onSelect={onSelectRegion}
+        />
+      )}
       {locationlessOpen && (
         <LocationlessSchedulePanel
           schedules={videoCallSchedules}
@@ -130,7 +182,7 @@ function ArchiveExplorerControls({
       )}
       {archiveDataOpen && <ArchiveExplorerPanel onClose={onCloseArchiveData} />}
     </section>
-  )
+  );
 }
 
-export default ArchiveExplorerControls
+export default ArchiveExplorerControls;

@@ -1,7 +1,11 @@
-@import "tailwindcss";
+/**
+ * 이 스타일은 앱 전체의 기본 글꼴, 색상 토큰, 접근성 기본값을 페이지 전반에 적용합니다.
+ */
+
+@import 'tailwindcss';
 
 @theme {
-  --font-sans: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  --font-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
   --color-brand-lime: #c9ee75;
   --color-brand-lime-hover: #b8e35d;
   --color-brand-green: #31551f;
@@ -19,7 +23,7 @@
   --brand-green-rgb: 49 85 31;
   --brand-lime-rgb: 201 238 117;
   --peach-rgb: 243 214 204;
-  font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
   font-weight: 400;
   color-scheme: light;
   font-synthesis: none;

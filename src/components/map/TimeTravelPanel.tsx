@@ -1,26 +1,31 @@
-import { useEffect, useRef } from 'react'
-import type { Schedule } from '../../types/archive'
-import type { TimeTravelSpeed } from './timeTravelController'
-import './TimeTravelPanel.css'
+/**
+ * 이 패널은 시간순 활동 여정의 재생, 일시정지, 배속 선택 UI를 제공합니다.
+ */
 
-const TIME_TRAVEL_SPEEDS: TimeTravelSpeed[] = [0.5, 1, 2, 4]
+import { useEffect, useRef } from 'react';
+import type { Schedule } from '../../types/archive';
+import type { TimeTravelSpeed } from './timeTravelController';
+import './TimeTravelPanel.css';
+
+const TIME_TRAVEL_SPEEDS: TimeTravelSpeed[] = [0.5, 1, 2, 4];
 
 type TimeTravelPanelProps = {
-  schedule: Schedule
-  locationName: string
-  index: number
-  total: number
-  playing: boolean
-  moving: boolean
-  pausedOnRoute: boolean
-  speed: TimeTravelSpeed
-  onClose: () => void
-  onPrevious: () => void
-  onTogglePlayback: () => void
-  onNext: () => void
-  onSpeedChange: (speed: TimeTravelSpeed) => void
-}
+  schedule: Schedule;
+  locationName: string;
+  index: number;
+  total: number;
+  playing: boolean;
+  moving: boolean;
+  pausedOnRoute: boolean;
+  speed: TimeTravelSpeed;
+  onClose: () => void;
+  onPrevious: () => void;
+  onTogglePlayback: () => void;
+  onNext: () => void;
+  onSpeedChange: (speed: TimeTravelSpeed) => void;
+};
 
+/** 시간순 여정의 재생 상태·속도·현재 도착 일정 조작을 제공합니다. */
 function TimeTravelPanel({
   schedule,
   locationName,
@@ -36,11 +41,11 @@ function TimeTravelPanel({
   onNext,
   onSpeedChange,
 }: TimeTravelPanelProps) {
-  const panelRef = useRef<HTMLElement>(null)
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    panelRef.current?.focus()
-  }, [])
+    panelRef.current?.focus();
+  }, []);
 
   return (
     <section
@@ -49,15 +54,30 @@ function TimeTravelPanel({
       aria-label="활동 여정 재생"
       tabIndex={-1}
       onKeyDown={(event) => {
-        if (event.key === 'Escape') onClose()
+        if (event.key === 'Escape') onClose();
       }}
     >
-      <header className="time-travel-header" aria-live="polite" aria-atomic="true">
+      <header
+        className="time-travel-header"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         <p>활동 여정</p>
         <strong>{schedule.date.replaceAll('-', '.')}</strong>
-        <button type="button" className="time-travel-close" aria-label="시간순 보기 닫기" onClick={onClose}>×</button>
+        <button
+          type="button"
+          className="time-travel-close"
+          aria-label="시간순 보기 닫기"
+          onClick={onClose}
+        >
+          ×
+        </button>
       </header>
-      <div className="time-travel-current-schedule" aria-live="polite" aria-atomic="true">
+      <div
+        className="time-travel-current-schedule"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         <strong>{schedule.title}</strong>
         {!playing && (
           <span>
@@ -80,14 +100,32 @@ function TimeTravelPanel({
         ))}
       </div>
       <div className="time-travel-controls">
-        <button type="button" aria-label="이전 일정" disabled={index === 0 || moving || pausedOnRoute} onClick={onPrevious}>이전</button>
-        <button type="button" className="time-travel-play" onClick={onTogglePlayback}>
+        <button
+          type="button"
+          aria-label="이전 일정"
+          disabled={index === 0 || moving || pausedOnRoute}
+          onClick={onPrevious}
+        >
+          이전
+        </button>
+        <button
+          type="button"
+          className="time-travel-play"
+          onClick={onTogglePlayback}
+        >
           {playing ? '일시정지' : '재생'}
         </button>
-        <button type="button" aria-label="다음 일정" disabled={index === total - 1 || moving || pausedOnRoute} onClick={onNext}>다음</button>
+        <button
+          type="button"
+          aria-label="다음 일정"
+          disabled={index === total - 1 || moving || pausedOnRoute}
+          onClick={onNext}
+        >
+          다음
+        </button>
       </div>
     </section>
-  )
+  );
 }
 
-export default TimeTravelPanel
+export default TimeTravelPanel;

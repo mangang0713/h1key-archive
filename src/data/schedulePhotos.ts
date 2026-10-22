@@ -1,7 +1,13 @@
+/**
+ * 이 파일은 일정별 X 게시물의 공개 사진 원본 URL과 출처 게시물 ID를 연결합니다.
+ */
+
 // X 내보내기에서 확인한 사진 게시물의 원본 URL입니다.
 // 해당 게시물은 원본 사진을 화면에 표시하므로 X 임베드에서 중복 노출하지 않습니다.
+/** 한 일정에 연결한 X 게시물별 원본 사진 주소와 출처 ID 묶음입니다. */
 export type PhotoPostGroup = { urls: string[]; sourcePostIds: string[] }
 
+/** 작성자가 게시물 본문에 적은 날짜를 기준으로 연결한 공개 X 미디어입니다. */
 export const photoPostsByScheduleId: Record<string, PhotoPostGroup> = {
   "schedule-2026-02-27-01": {
     "urls": [

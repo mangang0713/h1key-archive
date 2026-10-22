@@ -1,3 +1,7 @@
+/**
+ * 이 스타일은 지도 위치가 없는 일정 목록의 반응형 표시를 담당합니다.
+ */
+
 .locationless-panel {
   position: absolute;
   z-index: 5;
@@ -89,7 +93,9 @@
   font-size: 25px;
   line-height: 1;
   cursor: pointer;
-  transition: background-color 140ms ease, transform 140ms ease;
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 .locationless-close:hover {
@@ -117,7 +123,11 @@
   padding: 12px;
   border: 1px solid rgb(var(--brand-lime-rgb) / 42%);
   border-radius: 15px;
-  background: linear-gradient(120deg, rgb(var(--brand-lime-rgb) / 26%), var(--color-page) 78%);
+  background: linear-gradient(
+    120deg,
+    rgb(var(--brand-lime-rgb) / 26%),
+    var(--color-page) 78%
+  );
 }
 
 .locationless-list-symbol,
@@ -184,7 +194,10 @@
   background: var(--color-page);
   color: var(--color-text);
   text-align: left;
-  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 .locationless-panel .locationless-schedule-choice:hover {
@@ -290,8 +303,11 @@
   padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: 18px;
-  background:
-    radial-gradient(ellipse at 100% 0%, rgb(var(--brand-lime-rgb) / 24%), transparent 52%),
+  background: radial-gradient(
+      ellipse at 100% 0%,
+      rgb(var(--brand-lime-rgb) / 24%),
+      transparent 52%
+    ),
     var(--color-page);
 }
 

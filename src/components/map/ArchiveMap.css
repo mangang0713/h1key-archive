@@ -1,3 +1,7 @@
+/**
+ * 이 스타일은 지도 캔버스와 지도 위 컨트롤·팝업의 시각적 배치를 관리합니다.
+ */
+
 .map-container {
   width: 100%;
   height: 100vh;
@@ -18,7 +22,9 @@
   border: 3px solid #fff;
   border-radius: 50%;
   background: #f59e0b;
-  box-shadow: 0 0 0 5px rgb(245 158 11 / 38%), 0 2px 8px rgb(15 23 42 / 40%);
+  box-shadow:
+    0 0 0 5px rgb(245 158 11 / 38%),
+    0 2px 8px rgb(15 23 42 / 40%);
   pointer-events: none;
   animation: journey-marker-pulse 1.8s ease-out infinite;
 }
@@ -32,11 +38,15 @@
 @keyframes journey-marker-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 4px rgb(245 158 11 / 35%), 0 2px 8px rgb(15 23 42 / 40%);
+    box-shadow:
+      0 0 0 4px rgb(245 158 11 / 35%),
+      0 2px 8px rgb(15 23 42 / 40%);
   }
 
   50% {
-    box-shadow: 0 0 0 9px rgb(245 158 11 / 12%), 0 2px 8px rgb(15 23 42 / 40%);
+    box-shadow:
+      0 0 0 9px rgb(245 158 11 / 12%),
+      0 2px 8px rgb(15 23 42 / 40%);
   }
 }
 
@@ -110,5 +120,4 @@
   .map-home span {
     display: none;
   }
-
 }

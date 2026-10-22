@@ -17,6 +17,7 @@ var PLACE_LOOKUP_CONFIG = {
   failedStatus: '검색 실패'
 }
 
+/** 시트 메뉴에 장소 조회와 자동 검색 트리거 설정 기능을 노출합니다. */
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('장소 좌표')
@@ -25,6 +26,7 @@ function onOpen() {
     .addToUi()
 }
 
+/** 편집 이벤트마다 장소 후보를 갱신하도록 중복 없이 설치형 트리거를 설정합니다. */
 function installPlaceLookupTrigger() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
   var sheet = spreadsheet.getSheetByName(PLACE_LOOKUP_CONFIG.sheetName)
@@ -49,6 +51,7 @@ function installPlaceLookupTrigger() {
   Logger.log('장소 자동 검색 트리거 설정 완료: ' + spreadsheet.getName())
 }
 
+/** 행사명·장소 세부 정보가 바뀐 행만 찾아 주소 후보와 좌표를 갱신합니다. */
 function handlePlaceEdit(event) {
   if (!event || !event.range) return
   var sheet = event.range.getSheet()
@@ -82,6 +85,7 @@ function handlePlaceEdit(event) {
   }
 }
 
+/** 운영자가 선택한 행 한 곳의 주소와 좌표를 직접 다시 검색합니다. */
 function lookupSelectedPlace() {
   var sheet = SpreadsheetApp.getActiveSheet()
   var row = sheet.getActiveRange().getRow()
@@ -94,6 +98,7 @@ function lookupSelectedPlace() {
   sheet.getParent().toast('행 ' + row + '의 주소·좌표 검색을 마쳤습니다.', '장소 좌표', 5)
 }
 
+/** 확인 완료된 주소를 보존하고 신규 장소 검색 결과를 검토용 열에 기록합니다. */
 function lookupPlaceRow_(sheet, row) {
   var config = PLACE_LOOKUP_CONFIG
   var name = String(sheet.getRange(row, config.venueNameColumn).getDisplayValue()).replace(/^\s+|\s+$/g, '')
@@ -136,6 +141,7 @@ function lookupPlaceRow_(sheet, row) {
   }
 }
 
+/** 사용자가 이미 주소를 입력한 행을 다시 검색해 덮지 않도록 판별합니다. */
 function hasAddress_(value) {
   var text = String(value || '').replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ')
   if (!text) return false
@@ -145,6 +151,7 @@ function hasAddress_(value) {
   return hasRoadAddress || hasLotAddress
 }
 
+/** 실패한 검색 결과를 지워 오래된 주소·좌표가 확인된 값처럼 남지 않게 합니다. */
 function clearCandidate_(sheet, row) {
   var config = PLACE_LOOKUP_CONFIG
   sheet.getRange(row, config.addressCandidateColumn, 1, config.coordinatesColumn - config.addressCandidateColumn + 1).clearContent()

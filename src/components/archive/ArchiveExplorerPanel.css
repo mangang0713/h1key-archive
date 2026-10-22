@@ -1,3 +1,7 @@
+/**
+ * 이 스타일은 전체 기록 패널의 목록과 검색·필터·반응형 레이아웃을 관리합니다.
+ */
+
 .archive-data-overlay {
   position: fixed;
   z-index: 100;
@@ -32,13 +36,23 @@
 }
 
 @keyframes archive-data-overlay-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes archive-data-panel-in {
-  from { opacity: 0; transform: translateY(8px) scale(.99); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .archive-data-panel:focus-visible,
@@ -71,7 +85,7 @@
   color: var(--color-muted);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: .09em;
+  letter-spacing: 0.09em;
 }
 
 .archive-data-close {
@@ -115,7 +129,7 @@
   cursor: pointer;
 }
 
-.archive-data-tabs button[aria-pressed="true"] {
+.archive-data-tabs button[aria-pressed='true'] {
   background: var(--color-surface);
   color: var(--color-brand-green);
   box-shadow: 0 1px 4px rgb(15 23 42 / 12%);
@@ -349,7 +363,7 @@
   color: var(--color-muted);
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: .1em;
+  letter-spacing: 0.1em;
 }
 
 .archive-data-event-date time {
@@ -471,7 +485,9 @@
   color: #8f2947;
   font: inherit;
   cursor: pointer;
-  transition: background 120ms ease, transform 120ms ease;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
 }
 
 .archive-schedule-like:hover:not(:disabled) {
@@ -495,7 +511,7 @@
 }
 
 .archive-schedule-like:disabled {
-  opacity: .65;
+  opacity: 0.65;
   cursor: not-allowed;
 }
 
@@ -572,7 +588,7 @@
 
 .archive-schedule-review-stars {
   color: #c68025;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
 }
 
 .archive-schedule-review-meta time {
@@ -629,7 +645,13 @@
   overflow-wrap: anywhere;
 }
 
-.archive-data-song-count { margin-left: auto; color: var(--color-muted); font-size: 11px; font-weight: 500; white-space: nowrap; }
+.archive-data-song-count {
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
 
 .visually-hidden {
   position: absolute;
@@ -658,8 +680,14 @@
 }
 
 @keyframes archive-data-sheet-in {
-  from { opacity: .8; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0.8;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,3 +1,7 @@
+/**
+ * 이 스타일은 지도 탐색 컨트롤의 배치, 상태 표시, 모바일 표시를 담당합니다.
+ */
+
 .archive-explorer {
   position: absolute;
   z-index: 4;
@@ -47,7 +51,7 @@
 }
 
 .archive-explorer-action:hover,
-.archive-explorer-action[aria-expanded="true"] {
+.archive-explorer-action[aria-expanded='true'] {
   background: var(--color-section);
 }
 

@@ -1,125 +1,152 @@
-import './PhotoGallery.css'
+/**
+ * 이 모듈은 일정 사진 URL을 검증하고 팝업 안에서 사진 미리보기를 구성합니다.
+ */
+
+import './PhotoGallery.css';
+
+const officialMediaPrefix = `${import.meta.env.BASE_URL}media/official/`;
 
 function getSafePhotoUrls(urls: string[]) {
   return urls.filter((value) => {
+    if (value.startsWith(officialMediaPrefix)) return true;
     try {
-      return new URL(value).protocol === 'https:'
+      return new URL(value).protocol === 'https:';
     } catch {
-      return false
+      return false;
     }
-  })
+  });
 }
 
 // 사진은 페이지 안에서 확대합니다. X 게시물 임베드 iframe의 클릭은 브라우저 보안상 가로챌 수 없습니다.
-export function renderPhotoGallery(container: HTMLElement, urls: string[]) {
-  const photos = getSafePhotoUrls(urls)
-  if (!photos.length) return () => {}
+export function renderPhotoGallery(
+  container: HTMLElement,
+  urls: string[],
+  headingText = '사진 미리보기',
+) {
+  const photos = getSafePhotoUrls(urls);
+  if (!photos.length) return () => {};
 
-  const controller = new AbortController()
-  const { signal } = controller
-  const section = document.createElement('section')
-  section.className = 'archive-photo-gallery'
+  const controller = new AbortController();
+  const { signal } = controller;
+  const section = document.createElement('section');
+  section.className = 'archive-photo-gallery';
 
-  const heading = document.createElement('h3')
-  heading.textContent = '사진 미리보기'
-  section.append(heading)
+  const heading = document.createElement('h3');
+  heading.textContent = headingText;
+  section.append(heading);
 
-  const grid = document.createElement('div')
-  grid.className = 'archive-photo-grid'
-  section.append(grid)
+  const grid = document.createElement('div');
+  grid.className = 'archive-photo-grid';
+  section.append(grid);
 
-  let dialog: HTMLElement | undefined
-  let previousFocus: HTMLElement | undefined
-  let activeIndex = 0
+  let dialog: HTMLElement | undefined;
+  let previousFocus: HTMLElement | undefined;
+  let activeIndex = 0;
 
   const closeDialog = () => {
-    dialog?.remove()
-    dialog = undefined
-    previousFocus?.focus()
-    previousFocus = undefined
-  }
+    dialog?.remove();
+    dialog = undefined;
+    previousFocus?.focus();
+    previousFocus = undefined;
+  };
 
   const showPhoto = (index: number) => {
-    activeIndex = (index + photos.length) % photos.length
-    const image = dialog?.querySelector('img')
-    const counter = dialog?.querySelector<HTMLOutputElement>('.archive-photo-counter')
+    activeIndex = (index + photos.length) % photos.length;
+    const image = dialog?.querySelector('img');
+    const counter = dialog?.querySelector<HTMLOutputElement>(
+      '.archive-photo-counter',
+    );
     if (image) {
-      image.src = photos[activeIndex]
-      image.alt = `사진 ${activeIndex + 1}`
+      image.src = photos[activeIndex];
+      image.alt = `사진 ${activeIndex + 1}`;
     }
-    if (counter) counter.value = `${activeIndex + 1} / ${photos.length}`
-  }
+    if (counter) counter.value = `${activeIndex + 1} / ${photos.length}`;
+  };
 
   const openDialog = (index: number, trigger: HTMLElement) => {
-    if (dialog) return
-    previousFocus = trigger
-    dialog = document.createElement('div')
-    dialog.className = 'archive-photo-viewer'
-    dialog.setAttribute('role', 'dialog')
-    dialog.setAttribute('aria-modal', 'true')
-    dialog.setAttribute('aria-label', '사진 미리보기')
+    if (dialog) return;
+    previousFocus = trigger;
+    dialog = document.createElement('div');
+    dialog.className = 'archive-photo-viewer';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-label', '사진 미리보기');
 
-    const frame = document.createElement('div')
-    frame.className = 'archive-photo-viewer-frame'
-    const image = document.createElement('img')
-    image.alt = ''
-    frame.append(image)
+    const frame = document.createElement('div');
+    frame.className = 'archive-photo-viewer-frame';
+    const image = document.createElement('img');
+    image.alt = '';
+    frame.append(image);
 
-    const close = document.createElement('button')
-    close.type = 'button'
-    close.className = 'archive-photo-viewer-close'
-    close.setAttribute('aria-label', '사진 미리보기 닫기')
-    close.textContent = '×'
-    close.addEventListener('click', closeDialog, { signal })
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'archive-photo-viewer-close';
+    close.setAttribute('aria-label', '사진 미리보기 닫기');
+    close.textContent = '×';
+    close.addEventListener('click', closeDialog, { signal });
 
-    const controls = document.createElement('div')
-    controls.className = 'archive-photo-viewer-controls'
-    const previous = document.createElement('button')
-    previous.type = 'button'
-    previous.setAttribute('aria-label', '이전 사진')
-    previous.textContent = '‹'
-    previous.addEventListener('click', () => showPhoto(activeIndex - 1), { signal })
-    const counter = document.createElement('output')
-    counter.className = 'archive-photo-counter'
-    const next = document.createElement('button')
-    next.type = 'button'
-    next.setAttribute('aria-label', '다음 사진')
-    next.textContent = '›'
-    next.addEventListener('click', () => showPhoto(activeIndex + 1), { signal })
-    controls.append(previous, counter, next)
+    const controls = document.createElement('div');
+    controls.className = 'archive-photo-viewer-controls';
+    const previous = document.createElement('button');
+    previous.type = 'button';
+    previous.setAttribute('aria-label', '이전 사진');
+    previous.textContent = '‹';
+    previous.addEventListener('click', () => showPhoto(activeIndex - 1), {
+      signal,
+    });
+    const counter = document.createElement('output');
+    counter.className = 'archive-photo-counter';
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.setAttribute('aria-label', '다음 사진');
+    next.textContent = '›';
+    next.addEventListener('click', () => showPhoto(activeIndex + 1), {
+      signal,
+    });
+    controls.append(previous, counter, next);
 
-    dialog.append(close, frame, controls)
-    dialog.addEventListener('click', (event) => {
-      if (event.target === dialog) closeDialog()
-    }, { signal })
-    dialog.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') closeDialog()
-      if (event.key === 'ArrowLeft') showPhoto(activeIndex - 1)
-      if (event.key === 'ArrowRight') showPhoto(activeIndex + 1)
-    }, { signal })
-    document.body.append(dialog)
-    showPhoto(index)
-    close.focus()
-  }
+    dialog.append(close, frame, controls);
+    dialog.addEventListener(
+      'click',
+      (event) => {
+        if (event.target === dialog) closeDialog();
+      },
+      { signal },
+    );
+    dialog.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key === 'Escape') closeDialog();
+        if (event.key === 'ArrowLeft') showPhoto(activeIndex - 1);
+        if (event.key === 'ArrowRight') showPhoto(activeIndex + 1);
+      },
+      { signal },
+    );
+    document.body.append(dialog);
+    showPhoto(index);
+    close.focus();
+  };
 
   photos.forEach((url, index) => {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'archive-photo-thumb'
-    button.setAttribute('aria-label', `사진 ${index + 1} 크게 보기`)
-    const image = document.createElement('img')
-    image.src = url
-    image.alt = `사진 ${index + 1}`
-    image.loading = 'lazy'
-    button.append(image)
-    button.addEventListener('click', () => openDialog(index, button), { signal })
-    grid.append(button)
-  })
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'archive-photo-thumb';
+    button.setAttribute('aria-label', `사진 ${index + 1} 크게 보기`);
+    const image = document.createElement('img');
+    image.src = url;
+    image.alt = `사진 ${index + 1}`;
+    image.loading = 'lazy';
+    button.append(image);
+    button.addEventListener('click', () => openDialog(index, button), {
+      signal,
+    });
+    grid.append(button);
+  });
 
-  container.append(section)
-  signal.addEventListener('abort', closeDialog, { once: true })
+  container.append(section);
+  signal.addEventListener('abort', closeDialog, { once: true });
   return () => {
-    controller.abort()
-    section.remove()
-  }
+    controller.abort();
+    section.remove();
+  };
 }
