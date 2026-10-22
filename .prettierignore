@@ -1,0 +1,10 @@
+# 컴파일 결과와 의존성은 프로젝트 소스가 아니므로 포맷 대상에서 제외합니다.
+node_modules
+dist
+coverage
+package-lock.json
+# 스프레드시트에서 생성된 원본 자료는 행 단위 diff를 읽기 쉽도록 그대로 보존합니다.
+src/data/schedules.ts
+src/data/locations.ts
+src/data/songs.ts
+src/data/schedulePhotos.ts

@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"supabase/**/*.ts\" \"scripts/**/*.mjs\" \"eslint.config.js\" \"vite.config.ts\" \"tsconfig*.json\" \"package.json\" \".prettierrc\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"supabase/**/*.ts\" \"scripts/**/*.mjs\" \"eslint.config.js\" \"vite.config.ts\" \"tsconfig*.json\" \"package.json\" \".prettierrc\"",
     "data:import": "node scripts/import-schedules.mjs",
     "preview": "vite preview"
   },
@@ -28,6 +30,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.6",
     "globals": "^17.12.0",
+    "prettier": "^3.2.5",
     "supabase": "^2.121.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
