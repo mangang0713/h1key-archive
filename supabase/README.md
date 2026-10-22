@@ -5,16 +5,36 @@ Supabase 프로젝트의 커뮤니티 DB 마이그레이션과 `community-api` E
 ## 배포 전 준비
 
 1. 로컬 개발에서는 연결된 Supabase 프로젝트의 URL과 publishable key를 `.env.local`에 넣습니다. `.env.example`을 참고해 시작할 수 있습니다. GitHub Pages 배포에는 저장소 **Settings → Secrets and variables → Actions → Variables**에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY`를 등록합니다. 배포 workflow가 이 변수들을 빌드에 전달합니다. URL, publishable key, Turnstile site key는 브라우저에서 사용되는 공개 설정값입니다. `service_role` 키와 `TURNSTILE_SECRET_KEY`는 절대 `VITE_` 변수나 브라우저 번들에 넣지 말고 서버 secret으로만 보관합니다.
-2. Supabase SQL Editor 또는 Supabase CLI를 사용해 `migrations/202610190001_community_foundation.sql`, `migrations/202610200001_profile_onboarding.sql`, `migrations/202610200002_hessxl_admin.sql` 순서대로 적용합니다. 첫 마이그레이션은 커뮤니티 테이블과 읽기 API를 만들고, 두 번째는 기존 로그인 계정 프로필 보완과 공개 표시 이름 저장을, 세 번째는 `hessxl_` X 계정만 관리자로 판정하도록 설정합니다. 세 마이그레이션은 원격 프로젝트에 적용된 상태입니다.
-3. Supabase Auth의 사이트 URL과 Redirect URLs에 `http://localhost:5173/`, `http://127.0.0.1:5173/`, `https://mangang0713.github.io/happy-riina-day/`를 등록합니다.
-4. X OAuth 2.0, Google, Kakao 제공자 자격 증명을 Supabase Auth에 설정합니다. X는 로그인에만 사용하며 X 게시물을 자동 수집하지 않습니다. OAuth 제공자가 요구하는 공개 개인정보 안내와 이용약관 URL은 정책 문서를 최종 검토한 뒤 등록합니다.
-5. Cloudflare Turnstile 사이트 키는 공개 값이므로 로컬 `.env.local`과 GitHub Actions 저장소 변수 `VITE_TURNSTILE_SITE_KEY`에 둡니다. 비밀 키 `TURNSTILE_SECRET_KEY`는 Supabase Edge Function secret으로만 보관합니다.
-6. `community-api` Edge Function을 배포하고 다음 설정을 확인합니다: Supabase가 제공하는 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, 직접 등록한 `TURNSTILE_SECRET_KEY`, `ALLOWED_ORIGINS`. 현재 `ALLOWED_ORIGINS`는 로컬 주소, GitHub Pages, 임시 테스트 사이트 주소를 쉼표로 구분해 포함합니다. 서비스 역할 키는 Edge Function 비밀 설정에만 둡니다.
-7. 운영 메뉴는 X 로그인 계정 `hessxl_`에만 표시됩니다. 세 번째 마이그레이션의 서버 함수가 X OAuth identity의 사용자명을 확인해 해당 계정만 `admin_members`에 등록합니다. 화면에서 이름을 흉내 내거나 프로필 표시 이름을 바꾸는 것만으로 관리자 권한을 얻을 수 없습니다.
-8. 로그인, 작성·수정·삭제, 신고, 관리자 숨김·삭제, 사진 한도, 중단 스위치를 익명·일반 사용자·관리자로 각각 시험합니다. 개인정보 안내에는 X 문의 계정 `@hessxl_`와 2027년 12월 31일 이후 서비스 데이터 폐기 예정일을 반영했습니다. 공개 전에 실제 처리 흐름과 정책이 일치하는지 최종 검토합니다.
-9. 커뮤니티 신고·숨김·이의제기·7일 보관 흐름을 사용하는 경우 `migrations/202610210003_community_moderation_appeals_and_retention.sql`을 적용하고 최신 `community-api` Edge Function을 배포합니다. 이 마이그레이션은 기존 숨김 글에 적용 시점부터 7일의 이의제기 기간을 부여하고, 만료 시각이 지나도 대기 중인 이의제기가 있으면 최종 판정을 기다립니다.
-10. 자동 만료 정리를 활성화하려면 무작위 비밀값 하나를 정해 Edge Function Secrets에 `COMMUNITY_PURGE_SECRET`으로, Database → Vault에는 `community_purge_secret`으로 등록합니다. 두 값은 같아야 하며 코드·GitHub 저장소·공개 채팅에 넣지 않습니다. 그다음 `migrations/202610210004_schedule_community_content_purge.sql`을 적용하면 매시간 17분에 Edge Function을 호출하는 Cron 작업이 만들어집니다. Vault 비밀값이 등록되기 전에는 요청하지 않으며, 함수도 Edge secret과 값이 일치해야만 실행됩니다.
-11. 이의제기 기각 시 게시글·사진을 즉시 삭제하고 결과 사유만 작성자에게 7일간 보여주는 기능은 `migrations/202610210005_community_appeal_rejection_results.sql`과 최신 `community-api` Edge Function이 필요합니다. 마이그레이션을 먼저 적용한 뒤 Edge Function을 배포해야 하며, 결과 안내는 기존 시간별 정리 작업에서 만료 후 제거됩니다.
+2. Supabase Auth의 사이트 URL과 Redirect URLs에 `http://localhost:5173/`, `http://127.0.0.1:5173/`, `https://mangang0713.github.io/happy-riina-day/`를 등록합니다.
+3. X OAuth 2.0, Google, Kakao 제공자 자격 증명을 Supabase Auth에 설정합니다. X는 로그인에만 사용하며 X 게시물을 자동 수집하지 않습니다. OAuth 제공자가 요구하는 공개 개인정보 안내와 이용약관 URL은 정책 문서를 최종 검토한 뒤 등록합니다.
+4. Cloudflare Turnstile 사이트 키는 공개 값이므로 로컬 `.env.local`과 GitHub Actions 저장소 변수 `VITE_TURNSTILE_SITE_KEY`에 둡니다. Supabase Edge Function secrets에는 Supabase가 제공하는 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`와 직접 등록한 `TURNSTILE_SECRET_KEY`, `ALLOWED_ORIGINS`를 설정합니다. 자동 만료 정리를 사용할 때는 `COMMUNITY_PURGE_SECRET`도 추가합니다. `ALLOWED_ORIGINS`에는 로컬 주소와 GitHub Pages 등 실제 허용 origin만 쉼표로 구분해 넣습니다.
+5. 비어 있는 신규 데이터베이스에는 아래 SQL 마이그레이션을 파일명 순서대로 적용합니다.
+
+   - `migrations/202610190001_community_foundation.sql` — 커뮤니티 테이블, 기본 조회 API, RLS와 Storage 정책
+   - `migrations/202610200001_profile_onboarding.sql` — 표시 이름 저장과 기존 계정 프로필 보완
+   - `migrations/202610200002_hessxl_admin.sql` — X identity `hessxl_` 관리자 권한 확인
+   - `migrations/202610210001_guestbook_live_author_names.sql` — 공개 방명록의 최신 프로필 이름 조회
+   - `migrations/202610210002_hide_reported_community_content.sql` — 신고자가 신고한 글을 공개 목록에서 숨김
+   - `migrations/202610210003_community_moderation_appeals_and_retention.sql` — 숨김 게시물·이의제기·7일 보존 처리
+   - `migrations/202610210004_schedule_community_content_purge.sql` — 매시간 17분에 만료 콘텐츠 정리 작업 예약
+   - `migrations/202610210005_community_appeal_rejection_results.sql` — 이의제기 기각 사유를 작성자에게 7일간 전달
+   - `migrations/202610220001_hide_own_moderated_review_from_schedule.sql` — 숨김 처리된 본인 후기를 일반 일정 후기 목록에서도 제외
+
+   `202610210004`를 적용하기 전에는 Edge Function Secrets의 `COMMUNITY_PURGE_SECRET`과 Database → Vault의 `community_purge_secret`에 동일한 무작위 비밀값을 등록합니다. 둘 중 하나라도 없으면 예약 작업은 실행되지 않습니다.
+
+   기존 프로젝트는 일부 SQL을 Dashboard의 SQL Editor에서 직접 적용했으므로, CLI 이력이 실제 스키마와 다를 수 있습니다. Supabase CLI에 로그인한 뒤 연결된 프로젝트에 변경을 적용하기 전 `supabase migration list --linked`로 대조하고, 실제 테이블·함수·정책 적용 여부를 확인하세요. 이미 적용된 SQL을 다시 실행하거나 이력이 맞춰지기 전에 `supabase db push`를 하지 마세요. 기존 적용분은 DB 상태를 확인한 다음에만 migration history에 반영합니다.
+6. `community-api` Edge Function을 최신 코드로 배포합니다. `supabase/config.toml`에서 `verify_jwt = false`인 것은 일부 비로그인 작업과 별도 비밀값 인증을 함께 받기 때문입니다. 사용자 작업은 함수 안에서 Supabase Auth의 `getUser(token)`으로 토큰을 직접 검증한 뒤 수행하며, 관리자 작업은 서버 측 관리자 권한을 추가로 확인합니다. 이 설정을 로그인 검증이 꺼졌다는 뜻으로 해석하지 않습니다.
+7. 운영 메뉴는 X 로그인 계정 `hessxl_`에만 표시됩니다. 서버 측 관리자 확인은 X OAuth identity의 사용자명을 기준으로 하며, 화면 표시 이름을 바꾸는 것만으로 관리자 권한을 얻을 수 없습니다.
+8. 로그인, 작성·수정·삭제, 신고, 관리자 숨김·삭제, 이의제기 승인·기각, 사진 한도, 중단 스위치를 익명·일반 사용자·관리자로 각각 시험합니다. 개인정보 안내에는 X 문의 계정 `@hessxl_`와 2027년 12월 31일 이후 서비스 데이터 폐기 예정일을 반영했습니다. 공개 전에 실제 처리 흐름과 정책이 일치하는지 최종 검토합니다.
+
+## Edge Function 구조와 현재 점검
+
+- `functions/community-api/index.ts`는 CORS 응답, Bearer 토큰 확인, 요청 제한·약관·관리자 권한 확인과 방명록·후기·신고·이의제기·계정 요청 분기를 조율합니다. `verify_jwt = false`여도 일반 사용자 요청은 함수 내부에서 `auth.getUser(token)`으로 검증됩니다. CORS는 브라우저 응답을 제한하는 설정이며 API 인증을 대신하지 않습니다.
+- `functions/community-api/media.ts`는 비공개 Storage 업로드, 파일 검증, 사용량 예약·정산, 제한 시간 URL과 사진 삭제를 처리합니다.
+- `functions/community-api/moderation.ts`는 숨김 콘텐츠, 이의제기 정보 연결, 만료 시 콘텐츠·파일 정리를 처리합니다.
+- SQL은 RLS로 직접 테이블 접근을 제한하고, 공개 조회와 일부 작업은 권한이 제한된 `SECURITY DEFINER` 함수로 제공합니다. `service_role` 키는 Edge Function 안에서만 사용해야 합니다.
+- 현재 확인된 개선 후보는 `index.ts`의 요청 분기가 여러 커뮤니티 기능을 한 파일에 모으고, 예외 응답이 기본적으로 HTTP 400으로 반환되는 점입니다. 다음 작업은 요청 검증·오류 응답을 기능별 핸들러로 정리하고, 각 액션의 인증·권한·DB 변경 경계를 확인하는 것입니다. 이 점검에서는 자체 서버 이전, DB 변경 또는 배포를 하지 않습니다.
+- `verifyTurnstile`은 현재 `TURNSTILE_SECRET_KEY`가 없으면 검증을 건너뜁니다(fail-open). 운영 환경에 secret이 설정돼 있는지 확인하고, 누락 시 쓰기 요청을 차단하도록 바꿀지는 별도 보안 개선으로 시험해야 합니다.
 
 ## 한도와 운영
 

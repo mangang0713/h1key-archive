@@ -53,7 +53,7 @@
 - **Typography:** Pretendard Variable dynamic subset webfont (with system-font fallback)
 - **Map:** MapLibre GL JS
 - **Map style / tiles:** OpenFreeMap (현재 개발용 스타일)
-- **Code quality:** ESLint
+- **Code quality:** ESLint, Prettier
 
 Tailwind 유틸리티는 공유 레이아웃과 생일 랜딩 페이지부터 적용하고 있습니다. MapLibre 동적 마커·Popup과 커뮤니티 폼처럼 세부 상태가 많은 화면은 기존 CSS를 유지하며 단계적으로 전환합니다.
 
@@ -71,11 +71,14 @@ npm run dev
 ```bash
 npm run build
 npm run lint
+npm run format:check
 npm run preview
 ```
 
 - `build`: TypeScript 검사 및 배포용 빌드
-- `lint`: 코드 검사
+- `lint`: ESLint 코드 검사
+- `format`: Prettier로 코드 포맷 적용
+- `format:check`: 포맷 변경 없이 Prettier 검사
 - `preview`: 빌드 결과 로컬 미리보기
 
 ## 프로젝트 구조
