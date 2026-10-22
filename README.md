@@ -40,6 +40,7 @@
 - 상세 정보는 행사 정보·세트리스트·사진·영상 탭으로 나누어 확인
 - 행사 상세 페이지에서 날짜·장소와 확인된 시작 시간을 보조 정보로 표시. 같은 날짜 행사 순서는 데이터 검증용으로 관리하며 화면에는 표시하지 않음
 - **세트리스트를 공연 순서대로 표시**하고 곡 ID를 통해 곡 정보를 연결
+- 공식 계정 미디어는 행사별 그룹 사진·개인 사진·릴스로 분류하며, 사진은 저장소의 로컬 정적 파일로 연결
 - 전체 일정 검색 결과에서 지도에 표시되지 않는 영상통화·장소 미확인 일정도 열람
 - 세트리스트 **확인 완료 / 일부 확인 / 임시 기본 입력 / 미확인 / 공연 곡 없음** 상태 구분
 - 곡별 통계는 확인된 곡만 집계하며, 일부 확인 일정은 확인 가능한 최소 기록으로 표시
@@ -118,6 +119,7 @@ src/
 │  ├─ locations.ts               # 장소 및 좌표
 │  ├─ schedules.ts               # 스케줄 데이터
 │  ├─ schedulePhotos.ts          # 일정별 X 사진 URL과 원본 게시물 연결
+│  ├─ officialScheduleMedia.ts   # 일정별 공식 사진 파일과 릴스 링크 분류
 │  ├─ songs.ts                   # 곡 정보
 │  └─ songStats.ts               # 세트리스트에서 곡별 공연 일정 수 계산
 ├─ types/
@@ -132,6 +134,7 @@ supabase/
    ├─ index.ts                    # Edge Function 진입점과 요청별 흐름 조율
    ├─ media.ts                    # 사진 업로드·열람·삭제 처리
    └─ moderation.ts               # 숨김 콘텐츠 보존·이의제기·만료 정리
+public/media/official/             # 공식 계정 사진 파일(행사 날짜/분류별 보관)
 ```
 
 브라우저 경로 라우팅을 사용합니다. `/`는 생일 랜딩 페이지, `/archive`는 지도 아카이브이며 각 페이지 코드는 필요한 때 불러옵니다. GitHub Pages의 하위 경로 직접 접속과 새로고침은 `404.html`에서 앱 경로를 복원해 처리합니다. 기존 `#/...` 링크도 열면 새 경로로 정리됩니다. 지도 클러스터와 장소 마커는 MapLibre 레이어로 렌더링해 지도 확대·이동과 같은 프레임에서 위치와 크기가 바뀌도록 합니다.
@@ -139,6 +142,12 @@ supabase/
 지도 생명주기와 카메라 흐름은 `ArchiveMap.tsx`에서 조율하고, 마커 레이어 정의는 `locationMarkerLayers.ts`, 지도용 데이터 계산은 `archiveMapData.ts`, 탐색 메뉴 UI는 `ArchiveExplorerControls.tsx`, 시간순 탐방 동작은 `timeTravelController.ts`, 장소 이동은 `regionNavigationController.ts`가 맡습니다. 방명록 페이지는 목록과 사용자 권한 상태를 연결하고, 작성 폼과 신고 대화상자는 별도 컴포넌트가 담당합니다. Edge Function은 진입점, 사진 처리, 운영자 조정·만료 정리로 나눴습니다. Popup 콘텐츠와 탐색 UI의 스타일은 각각 해당 컴포넌트 파일 옆에 둡니다. `schedules.ts`, `locations.ts`, `schedulePhotos.ts`는 길지만 각각 원본 데이터 목록이라 가져오기 도구 호환성을 위해 한 파일에서 계속 편집할 수 있도록 유지합니다.
 
 장소와 스케줄은 **1:N 관계**로 관리하며, 세트리스트에는 곡 제목 대신 곡 ID를 저장합니다.
+
+### 공식 계정 사진 추가·분류
+
+공식 계정 사진은 게시물 본문에 적힌 행사 날짜를 기준으로 `public/media/official/<YYYY-MM-DD>/group/` 또는 `public/media/official/<YYYY-MM-DD>/individual/`에 넣습니다. `src/data/officialScheduleMedia.ts`에서 해당 일정 ID의 `officialGroupPhotos` 또는 `officialIndividualPhotos` 배열에 연결합니다. 파일 경로는 빌드 환경의 기본 경로를 자동으로 반영하므로 로컬과 GitHub Pages에서 같은 데이터 목록을 사용할 수 있습니다. 릴스는 영상 파일을 저장하지 않고 공식 Instagram 게시물 링크를 `officialReels`에 기록합니다. 각 분류의 자료가 연결되면 기존 지도 상세에 해당 탭이 나타나며, 자료가 없는 분류는 탭을 숨깁니다.
+
+`public/`의 파일은 빌드 결과에 포함되어 공개 사이트에서 누구나 열 수 있습니다. 실제 자료를 추가할 때는 공개해도 되는 파일인지 확인하고, 사진은 웹용으로 크기를 줄인 파일을 사용하세요. 파일 이름은 폴더 안에서 `01.webp`, `02.webp`처럼 순서를 알 수 있게 정하면 됩니다.
 
 ### 온라인 일정과 지도 위치
 

@@ -1,3 +1,7 @@
+/**
+ * 이 스타일은 지도 스케줄 팝업의 일정 목록과 상세 전환 UI를 꾸밉니다.
+ */
+
 .schedule-choice {
   width: 100%;
   min-height: 44px;
@@ -43,8 +47,11 @@
   font-weight: 500;
   text-decoration: none;
 }
-.schedule-community-link:focus-visible { outline: 3px solid var(--color-brand-green); outline-offset: 2px; border-radius: 4px; }
-
+.schedule-community-link:focus-visible {
+  outline: 3px solid var(--color-brand-green);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
 .archive-map .maplibregl-popup-close-button {
   z-index: 2;
@@ -80,7 +87,7 @@
   width: 100%;
   max-height: min(66dvh, 620px);
   overflow: hidden;
-  font-family: "Pretendard Variable", Pretendard, sans-serif;
+  font-family: 'Pretendard Variable', Pretendard, sans-serif;
   color: var(--color-text);
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -175,10 +182,13 @@
   font-weight: 500;
   overflow-wrap: anywhere;
   cursor: pointer;
-  transition: color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
-.schedule-tab[aria-selected="true"] {
+.schedule-tab[aria-selected='true'] {
   background: var(--color-surface);
   color: var(--color-brand-green);
   box-shadow: 0 2px 7px rgb(var(--brand-green-rgb) / 14%);
@@ -392,15 +402,43 @@
   gap: 7px;
 }
 
-.schedule-popup .schedule-choice-row + .schedule-choice-row { margin-top: 8px; }
-.schedule-popup .schedule-choice-row .schedule-choice { min-width: 0; }
-.schedule-choice-details { display: grid; min-width: 0; gap: 4px; }
+.schedule-popup .schedule-choice-row + .schedule-choice-row {
+  margin-top: 8px;
+}
+.schedule-popup .schedule-choice-row .schedule-choice {
+  min-width: 0;
+}
+.schedule-choice-details {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
 .schedule-choice-details time,
-.schedule-choice-details > span { display: block; color: var(--color-muted); font-size: 11px; }
-.schedule-choice-details strong { display: block; color: var(--color-text); font-size: 13px; }
+.schedule-choice-details > span {
+  display: block;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+.schedule-choice-details strong {
+  display: block;
+  color: var(--color-text);
+  font-size: 13px;
+}
 
-.schedule-like-control { display: flex; align-items: center; gap: 9px; margin-top: 10px; }
-.schedule-like-control.is-compact { display: grid; width: 68px; align-content: center; justify-items: center; gap: 2px; margin: 0; }
+.schedule-like-control {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+}
+.schedule-like-control.is-compact {
+  display: grid;
+  width: 68px;
+  align-content: center;
+  justify-items: center;
+  gap: 2px;
+  margin: 0;
+}
 .schedule-like-button {
   display: inline-flex;
   min-width: 70px;
@@ -421,12 +459,32 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.schedule-like-button:hover:not(:disabled) { border-color: #d98da0; background: #ffe7ef; }
-.schedule-like-button.is-liked { background: #ffe7ef; color: #8c1837; }
-.schedule-like-button:disabled { opacity: 0.65; cursor: wait; }
-.schedule-like-button:focus-visible { outline: 3px solid var(--color-brand-green); outline-offset: 2px; }
-.schedule-like-status { min-height: 1em; color: var(--color-muted); font-size: 10px; line-height: 1.2; }
-.schedule-like-control.is-compact .schedule-like-status { max-width: 76px; text-align: center; }
+.schedule-like-button:hover:not(:disabled) {
+  border-color: #d98da0;
+  background: #ffe7ef;
+}
+.schedule-like-button.is-liked {
+  background: #ffe7ef;
+  color: #8c1837;
+}
+.schedule-like-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.schedule-like-button:focus-visible {
+  outline: 3px solid var(--color-brand-green);
+  outline-offset: 2px;
+}
+.schedule-like-status {
+  min-height: 1em;
+  color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1.2;
+}
+.schedule-like-control.is-compact .schedule-like-status {
+  max-width: 76px;
+  text-align: center;
+}
 
 .archive-schedule-popup .archive-photo-gallery {
   margin: 0;
@@ -471,9 +529,16 @@
     max-height: min(36dvh, 320px);
   }
 
-  .schedule-choice-row { gap: 5px; }
-  .schedule-like-control.is-compact { width: 60px; }
-  .schedule-like-button { min-width: 60px; padding: 0 7px; }
+  .schedule-choice-row {
+    gap: 5px;
+  }
+  .schedule-like-control.is-compact {
+    width: 60px;
+  }
+  .schedule-like-button {
+    min-width: 60px;
+    padding: 0 7px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

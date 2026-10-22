@@ -1,7 +1,12 @@
+/**
+ * 이 파일은 스프레드시트에서 검증해 반영한 일정 원본과 일정별 X 게시물 연결을 보관합니다.
+ */
+
 import type { Schedule } from '../types/archive'
 import { locations } from './locations'
 import { songs } from './songs'
 import { photoPostsByScheduleId } from './schedulePhotos'
+import { officialScheduleMediaByScheduleId } from './officialScheduleMedia'
 
 // 사용자 확인 스프레드시트의 일정과 세트리스트입니다.
 export const schedules: Schedule[] = [
@@ -1586,6 +1591,10 @@ const classifiedMultiScheduleDates = new Set([
 
 const attachedXPostDates = new Set<string>()
 for (const schedule of schedules) {
+  const officialMedia = officialScheduleMediaByScheduleId[schedule.id]
+  if (officialMedia) {
+    schedule.media = { ...schedule.media, ...officialMedia }
+  }
   const isClassifiedDate = classifiedMultiScheduleDates.has(schedule.date)
   const ids = xPostIdsByScheduleId[schedule.id] ?? (
     isClassifiedDate || attachedXPostDates.has(schedule.date)
@@ -1606,6 +1615,12 @@ for (const schedule of schedules) {
     }
   }
   if (!isClassifiedDate) attachedXPostDates.add(schedule.date)
+}
+const scheduleIds = new Set(schedules.map((schedule) => schedule.id))
+for (const scheduleId of Object.keys(officialScheduleMediaByScheduleId)) {
+  if (!scheduleIds.has(scheduleId)) {
+    throw new Error(scheduleId + ': 공식 미디어가 존재하지 않는 일정 ID를 참조합니다.')
+  }
 }
 // 새 데이터를 추가할 때 잘못된 ID 연결과 같은 날짜의 순서 중복을 발견합니다.
 for (const [name, entries] of [
